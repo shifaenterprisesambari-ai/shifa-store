@@ -51,23 +51,153 @@
 
 // start();
 
+// import "dotenv/config";
+// import fastify from "fastify";
+// import { Server } from "socket.io";
+
+// import { connectDB } from "./src/config/connect.js";
+// import { PORT } from "./src/config/config.js";
+// import { registerRoutes } from "./src/routes/index.js";
+// import { admin, buildAdminRouter } from "./src/config/setup.js";
+
+// const start = async () => {
+//   await connectDB(process.env.MONGO_URI);
+
+//   const app = fastify({
+//     logger: true,
+//   });
+
+//   // ✅ Create Socket.IO server (Fastify v5 compatible)
+//   const io = new Server(app.server, {
+//     cors: {
+//       origin: "*",
+//     },
+//     pingInterval: 10000,
+//     pingTimeout: 5000,
+//     transports: ["websocket"],
+//   });
+
+//   // ✅ Make io accessible everywhere
+//   app.decorate("io", io);
+
+//   // 🔌 Socket events
+//   io.on("connection", (socket) => {
+//     console.log("A user connected ✅", socket.id);
+
+//     socket.on("joinRoom", (orderId) => {
+//       socket.join(orderId);
+//       console.log(`🔴 User joined room ${orderId}`);
+//     });
+
+//     socket.on("disconnect", () => {
+//       console.log("User disconnected ❌", socket.id);
+//     });
+//   });
+
+//   // Routes & Admin
+//   await registerRoutes(app);
+//   await buildAdminRouter(app);
+
+//   // Start server
+//   await app.listen({ port: PORT, host: "0.0.0.0" });
+
+//   console.log(
+//     `🚀 Shifa Store running on http://localhost:${PORT}${admin.options.rootPath}`
+//   );
+// };
+
+// start();
+
+// import "dotenv/config";
+// import fastify from "fastify";
+// import cookie from "@fastify/cookie";
+// import session from "@fastify/session";
+// import { Server } from "socket.io";
+
+// import { connectDB } from "./src/config/connect.js";
+// import { PORT } from "./src/config/config.js";
+// import { registerRoutes } from "./src/routes/index.js";
+// import { admin, buildAdminRouter } from "./src/config/setup.js";
+
+// const start = async () => {
+//   await connectDB(process.env.MONGO_URI);
+
+//   const app = fastify({ logger: true });
+
+//   // ✅ Cookies FIRST
+//   await app.register(cookie);
+
+//   // ✅ Session SECOND
+//   await app.register(session, {
+//     secret: process.env.SESSION_SECRET,
+//     cookie: { secure: false },
+//     saveUninitialized: false,
+//   });
+
+//   // ✅ AdminJS THIRD
+//   await buildAdminRouter(app);
+
+//   // ✅ Socket.IO AFTER AdminJS
+//   const io = new Server(app.server, {
+//     cors: { origin: "*" },
+//     transports: ["websocket"],
+//   });
+
+//   app.decorate("io", io);
+
+//   io.on("connection", (socket) => {
+//     console.log("Socket connected:", socket.id);
+//   });
+
+//   // ✅ Routes LAST
+//   await registerRoutes(app);
+
+//   await app.listen({ port: PORT, host: "0.0.0.0" });
+
+//   console.log(
+//     `🚀 Admin running on http://localhost:${PORT}${admin.options.rootPath}`
+//   );
+// };
+
+// start();
+
 import "dotenv/config";
 import fastify from "fastify";
+import cookie from "@fastify/cookie";
+import session from "@fastify/session";
 import { Server } from "socket.io";
 
 import { connectDB } from "./src/config/connect.js";
-import { PORT } from "./src/config/config.js";
+import { PORT, COOKIE_PASSWORD } from "./src/config/config.js";
 import { registerRoutes } from "./src/routes/index.js";
 import { admin, buildAdminRouter } from "./src/config/setup.js";
 
 const start = async () => {
+  // 🔌 DB
   await connectDB(process.env.MONGO_URI);
 
   const app = fastify({
     logger: true,
   });
 
-  // ✅ Create Socket.IO server (Fastify v5 compatible)
+  // 🍪 Cookies (REQUIRED for AdminJS)
+  await app.register(cookie);
+
+  // 🧠 Session (Fastify-native ONLY)
+  await app.register(session, {
+    secret: COOKIE_PASSWORD,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    },
+    saveUninitialized: false,
+  });
+
+  // 🛡️ AdminJS (AFTER cookie + session)
+  await buildAdminRouter(app);
+
+  // 🔌 Socket.IO (Fastify v5 compatible)
   const io = new Server(app.server, {
     cors: {
       origin: "*",
@@ -77,32 +207,29 @@ const start = async () => {
     transports: ["websocket"],
   });
 
-  // ✅ Make io accessible everywhere
   app.decorate("io", io);
 
-  // 🔌 Socket events
   io.on("connection", (socket) => {
-    console.log("A user connected ✅", socket.id);
+    console.log("🔵 Socket connected:", socket.id);
 
     socket.on("joinRoom", (orderId) => {
       socket.join(orderId);
-      console.log(`🔴 User joined room ${orderId}`);
+      console.log(`🟢 Joined room ${orderId}`);
     });
 
     socket.on("disconnect", () => {
-      console.log("User disconnected ❌", socket.id);
+      console.log("🔴 Socket disconnected:", socket.id);
     });
   });
 
-  // Routes & Admin
+  // 🚏 API Routes
   await registerRoutes(app);
-  await buildAdminRouter(app);
 
-  // Start server
+  // 🚀 Start server
   await app.listen({ port: PORT, host: "0.0.0.0" });
 
   console.log(
-    `🚀 Shifa Store running on http://localhost:${PORT}${admin.options.rootPath}`
+    `✅ Server running at http://localhost:${PORT}${admin.options.rootPath}`
   );
 };
 
