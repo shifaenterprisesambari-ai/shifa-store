@@ -57,8 +57,62 @@
 
 
 
+// import "dotenv/config";
+// import fastify from "fastify";
+// import session from "@fastify/session";
+// import { Server } from "socket.io";
+
+// import { connectDB } from "./src/config/connect.js";
+// import { PORT, COOKIE_PASSWORD } from "./src/config/config.js";
+// import { registerRoutes } from "./src/routes/index.js";
+// import { admin, buildAdminRouter } from "./src/config/setup.js";
+
+// const start = async () => {
+//   await connectDB(process.env.MONGO_URI);
+
+//   const app = fastify({ logger: true });
+
+//   // ✅ Register session ONLY (AdminJS will handle cookies)
+//   await app.register(session, {
+//     secret: COOKIE_PASSWORD,
+//     cookie: {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === "production",
+//       sameSite: "lax",
+//     },
+//     saveUninitialized: false,
+//   });
+
+//   // ✅ AdminJS
+//   await buildAdminRouter(app);
+
+//   // ✅ Socket.IO
+//   const io = new Server(app.server, {
+//     cors: { origin: "*" },
+//     transports: ["websocket"],
+//   });
+
+//   app.decorate("io", io);
+
+//   io.on("connection", (socket) => {
+//     console.log("🔵 Socket connected:", socket.id);
+//   });
+
+//   // ✅ Routes
+//   await registerRoutes(app);
+
+//   await app.listen({ port: PORT, host: "0.0.0.0" });
+
+//   console.log(
+//     `✅ Server running at http://localhost:${PORT}${admin.options.rootPath}`
+//   );
+// };
+
+// start();
+
 import "dotenv/config";
 import fastify from "fastify";
+import cookie from "@fastify/cookie";
 import session from "@fastify/session";
 import { Server } from "socket.io";
 
@@ -72,7 +126,10 @@ const start = async () => {
 
   const app = fastify({ logger: true });
 
-  // ✅ Register session ONLY (AdminJS will handle cookies)
+  // ✅ Register cookie FIRST (required by session)
+  await app.register(cookie);
+
+  // ✅ Register session SECOND
   await app.register(session, {
     secret: COOKIE_PASSWORD,
     cookie: {
@@ -83,7 +140,7 @@ const start = async () => {
     saveUninitialized: false,
   });
 
-  // ✅ AdminJS
+  // ✅ AdminJS (cookie already registered)
   await buildAdminRouter(app);
 
   // ✅ Socket.IO
@@ -109,4 +166,3 @@ const start = async () => {
 };
 
 start();
-
