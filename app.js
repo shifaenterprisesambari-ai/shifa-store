@@ -55,8 +55,6 @@
 
 // start();
 
-
-
 // import "dotenv/config";
 // import fastify from "fastify";
 // import session from "@fastify/session";
@@ -112,12 +110,10 @@
 
 import "dotenv/config";
 import fastify from "fastify";
-import cookie from "@fastify/cookie";
-import session from "@fastify/session";
 import { Server } from "socket.io";
 
 import { connectDB } from "./src/config/connect.js";
-import { PORT, COOKIE_PASSWORD } from "./src/config/config.js";
+import { PORT } from "./src/config/config.js";
 import { registerRoutes } from "./src/routes/index.js";
 import { admin, buildAdminRouter } from "./src/config/setup.js";
 
@@ -126,21 +122,7 @@ const start = async () => {
 
   const app = fastify({ logger: true });
 
-  // ✅ Register cookie FIRST (required by session)
-  await app.register(cookie);
-
-  // ✅ Register session SECOND
-  await app.register(session, {
-    secret: COOKIE_PASSWORD,
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-    },
-    saveUninitialized: false,
-  });
-
-  // ✅ AdminJS (cookie already registered)
+  // ✅ AdminJS (handles cookies internally)
   await buildAdminRouter(app);
 
   // ✅ Socket.IO
