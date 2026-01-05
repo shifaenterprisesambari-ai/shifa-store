@@ -90,101 +90,70 @@
 //     )
 // }
 
-// import AdminJS from "adminjs";
-// import AdminJSFastify from "@adminjs/fastify";
-// import * as AdminJSMongoose from "@adminjs/mongoose";
-// import * as Models from "../models/index.js";
-// import { authenticate, COOKIE_PASSWORD } from "./config.js";
-// import { dark, light, noSidebar } from "@adminjs/themes";
-
-// AdminJS.registerAdapter(AdminJSMongoose);
-
-// export const admin = new AdminJS({
-//   resources: [
-//     {
-//       resource: Models.Customer,
-//       options: {
-//         listProperties: ["phone", "role", "isActivated"],
-//         filterProperties: ["phone", "role"],
-//       },
-//     },
-//     {
-//       resource: Models.DeliveryPartner,
-//       options: {
-//         listProperties: ["email", "phone", "role", "isActivated"],
-//         filterProperties: ["email", "role"],
-//       },
-//     },
-//     {
-//       resource: Models.Admin,
-//       options: {
-//         listProperties: ["email", "role", "isActivated"],
-//         filterProperties: ["email", "role"],
-//       },
-//     },
-//     {
-//       resource: Models.ShopOwner,
-//       options: {
-//         listProperties: ["name", "email", "phone", "role", "isActivated"],
-//         filterProperties: ["name", "email", "role"],
-//       },
-//     },
-//     {
-//       resource: Models.Shop,
-//       options: {
-//         listProperties: ["name", "owner"],
-//         filterProperties: ["name", "owner"],
-//         properties: {
-//           owner: {
-//             reference: "ShopOwner",
-//           },
-//         },
-//       },
-//     },
-//     { resource: Models.Branch },
-//     { resource: Models.Product },
-//     { resource: Models.Category },
-//     { resource: Models.Order },
-//     { resource: Models.Counter },
-//   ],
-//   branding: {
-//     companyName: "Grocery Delivery App",
-//     withMadeWithLove: false,
-//   },
-//   defaultTheme: dark.id,
-//   availableThemes: [dark, light, noSidebar],
-//   rootPath: "/admin",
-// });
-
-// export const buildAdminRouter = async (app) => {
-//   await AdminJSFastify.buildAuthenticatedRouter(
-//     admin,
-//     {
-//       authenticate,
-//       cookiePassword: COOKIE_PASSWORD,
-//       cookieName: "adminjs",
-//     },
-//     app
-//     // ❌ DO NOT pass session options here
-//   );
-// };
-
 import AdminJS from "adminjs";
 import AdminJSFastify from "@adminjs/fastify";
 import * as AdminJSMongoose from "@adminjs/mongoose";
 import * as Models from "../models/index.js";
 import { authenticate, COOKIE_PASSWORD } from "./config.js";
+import { dark, light, noSidebar } from "@adminjs/themes";
 
 AdminJS.registerAdapter(AdminJSMongoose);
 
 export const admin = new AdminJS({
-  rootPath: "/admin",
   resources: [
-    { resource: Models.Admin },
-    { resource: Models.Customer },
-    { resource: Models.Shop },
+    {
+      resource: Models.Customer,
+      options: {
+        listProperties: ["phone", "role", "isActivated"],
+        filterProperties: ["phone", "role"],
+      },
+    },
+    {
+      resource: Models.DeliveryPartner,
+      options: {
+        listProperties: ["email", "phone", "role", "isActivated"],
+        filterProperties: ["email", "role"],
+      },
+    },
+    {
+      resource: Models.Admin,
+      options: {
+        listProperties: ["email", "role", "isActivated"],
+        filterProperties: ["email", "role"],
+      },
+    },
+    {
+      resource: Models.ShopOwner,
+      options: {
+        listProperties: ["name", "email", "phone", "role", "isActivated"],
+        filterProperties: ["name", "email", "role"],
+      },
+    },
+    {
+      resource: Models.Shop,
+      options: {
+        listProperties: ["name", "owner"],
+        filterProperties: ["name", "owner"],
+        properties: {
+          owner: {
+            reference: "ShopOwner",
+          },
+        },
+      },
+    },
+    { resource: Models.Branch },
+    { resource: Models.Product },
+    { resource: Models.Category },
     { resource: Models.Order },
+    { resource: Models.Counter },
   ],
+  branding: {
+    companyName: "Grocery Delivery App",
+    withMadeWithLove: false,
+  },
+  defaultTheme: dark.id,
+  availableThemes: [dark, light, noSidebar],
+  rootPath: "/admin",
 });
 
 export const buildAdminRouter = async (app) => {
@@ -198,4 +167,3 @@ export const buildAdminRouter = async (app) => {
     app
   );
 };
-
