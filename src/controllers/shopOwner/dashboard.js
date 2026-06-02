@@ -1,0 +1,129 @@
+import mongoose from "mongoose";
+import Order from "../../models/order.js";
+import Product from "../../models/products.js";
+import Branch from "../../models/branch.js";
+import { ShopOwner } from "../../models/user.js";
+
+/**
+ * Get dashboard statistics for the authenticated shop owner.
+ */
+export const getDashboardStats = async (req, reply) => {
+  try {
+    const { userId } = req.user;
+
+    const shopOwner = await ShopOwner.findById(userId);
+    const shopId = shopOwner?.shop || userId;
+    const branchId = shopOwner?.branch;
+
+    // Build aggregations/counts matching custom shop ID or user ID
+    const productQuery = { $or: [ { shop: shopId }, { shop: userId } ] };
+    const activeProductQuery = { 
+      $or: [ { shop: shopId }, { shop: userId } ], 
+      isEnabled: true, 
+      isAvailable: true 
+    };
+
+    const orderQuery = {
+      $or: [
+        { shopOwner: userId },
+        ...(branchId ? [{ branch: branchId }] : [])
+      ]
+    };
+
+    // Aggregate matching for aggregation pipeline (must manually cast to ObjectId)
+    const matchQuery = { status: "delivered" };
+    const orConditions = [];
+    if (userId) orConditions.push({ shopOwner: new mongoose.Types.ObjectId(userId) });
+    if (branchId) orConditions.push({ branch: new mongoose.Types.ObjectId(branchId) });
+    if (orConditions.length > 0) matchQuery.$or = orConditions;
+
+    // Run queries in parallel
+    const [
+      totalProducts,
+      activeProducts,
+      pendingOrders,
+      acceptedOrders,
+      deliveredOrders,
+      totalOrders,
+      revenueResult,
+    ] = await Promise.all([
+      Product.countDocuments(productQuery),
+      Product.countDocuments(activeProductQuery),
+      Order.countDocuments({ ...orderQuery, status: "pending" }),
+      Order.countDocuments({ ...orderQuery, status: "accepted" }),
+      Order.countDocuments({ ...orderQuery, status: "delivered" }),
+      Order.countDocuments(orderQuery),
+      Order.aggregate([
+        { $match: matchQuery },
+        { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } },
+      ]),
+    ]);
+
+    const totalRevenue =
+      revenueResult.length > 0 ? revenueResult[0].totalRevenue : 0;
+
+    return reply.send({
+      products: {
+        total: totalProducts,
+        active: activeProducts,
+      },
+      orders: {
+        total: totalOrders,
+        pending: pendingOrders,
+        accepted: acceptedOrders,
+        delivered: deliveredOrders,
+      },
+      revenue: totalRevenue,
+      branch: branchId ? await Branch.findById(branchId) : null,
+    });
+  } catch (error) {
+    console.error("FAILED TO FETCH DASHBOARD STATS:", error);
+    return reply
+      .status(500)
+      .send({ message: "Failed to fetch dashboard stats", error });
+  }
+};
+
+/**
+ * Update shop (branch) settings like name, address, photo URL, location.
+ */
+export const updateShopSettings = async (req, reply) => {
+  try {
+    const { userId } = req.user;
+    const { name, address, image, latitude, longitude } = req.body;
+
+    const shopOwner = await ShopOwner.findById(userId);
+    if (!shopOwner) {
+      return reply.status(404).send({ message: "Shop Owner not found" });
+    }
+
+    if (!shopOwner.branch) {
+      return reply.status(400).send({ message: "No branch assigned to this shop owner" });
+    }
+
+    const branch = await Branch.findById(shopOwner.branch);
+    if (!branch) {
+      return reply.status(404).send({ message: "Branch not found" });
+    }
+
+    if (name !== undefined) branch.name = name;
+    if (address !== undefined) branch.address = address;
+    if (image !== undefined) branch.image = image;
+
+    if (latitude !== undefined || longitude !== undefined) {
+      if (!branch.location) branch.location = {};
+      if (latitude !== undefined) branch.location.latitude = Number(latitude);
+      if (longitude !== undefined) branch.location.longitude = Number(longitude);
+    }
+
+    await branch.save();
+
+    return reply.send({
+      message: "Shop settings updated successfully",
+      branch,
+    });
+  } catch (error) {
+    console.error("FAILED TO UPDATE SHOP SETTINGS:", error);
+    return reply.status(500).send({ message: "Failed to update shop settings", error });
+  }
+};

@@ -1,191 +1,108 @@
-// import mongoose from "mongoose";
-// import Counter from "./counter.js";
-
-// const orderSchema= new mongoose.Schema({
-//     orderId:{
-//         type:String,
-//         unique:true
-//     },
-//     customer: {
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref :"Customer",
-//         required:true
-//     },
-//     deliveryPartner: {
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref: "DeliveryPartner",
-//     },
-//     branch: {
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref: "Branch",
-//         required: true,
-//     },
-//     items: [
-//         {
-//           id: {
-//             type: mongoose.Schema.Types.ObjectId,
-//             ref: "Product",
-//             required: true,
-//           },
-//           item: {
-//             type: mongoose.Schema.Types.ObjectId,
-//             ref: "Product",
-//             required: true,
-//           },
-//           count: { type: Number, required: true },
-//         },
-//       ],
-//       deliveryLocation: {
-//         latitude: { type: Number, required: true },
-//         longitude: { type: Number, required: true },
-//         address: { type: String },
-//       },
-//       pickupLocation: {
-//         latitude: { type: Number, required: true },
-//         longitude: { type: Number, required: true },
-//         address: { type: String },
-//       },
-//       deliveryPersonLocation: {
-//         latitude: { type: Number },
-//         longitude: { type: Number },
-//         address: { type: String },
-//       },
-//       status: {
-//         type: String,
-//         enum: ["available", "confirmed", "arriving", "delivered", "cancelled"],
-//         default: "available",
-//       },
-//       totalPrice: { type: Number, required: true },
-//       createdAt: { type: Date, default: Date.now },
-//       updatedAt: { type: Date, default: Date.now },
-// });
-
-// async function getNextSequenceValue(sequenceName) {
-//     const sequenceDocument = await Counter.findOneAndUpdate(
-//         { name: sequenceName },
-//         { $inc: { sequence_value: 1 } },
-//         { new: true, upsert: true }
-//       );
-//       return sequenceDocument.sequence_value;
-// }
-
-// orderSchema.pre('save',async function (next){
-//     if(this.isNew){
-//         const sequenceValue = await getNextSequenceValue("orderId");
-//         this.orderId=`ORDR${sequenceValue.toString().padStart(5,'0')}`
-//     }
-//     next();
-// });
-
-// const Order = mongoose.model('Order',orderSchema)
-
-// export default Order
-
 import mongoose from "mongoose";
 import Counter from "./counter.js";
 
-const orderSchema = new mongoose.Schema(
-  {
-    orderId: {
-      type: String,
-      unique: true,
+const orderSchema= new mongoose.Schema({
+    orderId:{
+        type:String,
+        unique:true
     },
-
     customer: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Customer",
-      required: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref :"Customer",
+        required:true
     },
-
     deliveryPartner: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "DeliveryPartner",
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "DeliveryPartner",
     },
-
-    shop: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Shop",
-      required: true,
-    },
-
     branch: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Branch",
-      required: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Branch",
+        required: true,
     },
-
+    shopOwner: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ShopOwner",
+    },
     items: [
-      {
-        item: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Product",
-          required: true,
+        {
+          id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Product",
+            required: true,
+          },
+          item: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Product",
+            required: true,
+          },
+          count: { type: Number, required: true },
         },
-        count: { type: Number, required: true },
-      },
-    ],
-
-    deliveryLocation: {
-      latitude: { type: Number, required: true },
-      longitude: { type: Number, required: true },
-      address: { type: String },
-    },
-
-    pickupLocation: {
-      latitude: { type: Number, required: true },
-      longitude: { type: Number, required: true },
-      address: { type: String },
-    },
-
-    deliveryPersonLocation: {
-      latitude: { type: Number },
-      longitude: { type: Number },
-      address: { type: String },
-    },
-
-    status: {
-      type: String,
-      enum: [
-        "PLACED",
-        "AVAILABLE_FOR_DELIVERY",
-        "ASSIGNED_TO_DELIVERY",
-        "PICKED_UP",
-        "OUT_FOR_DELIVERY",
-        "DELIVERED",
-        "CANCELLED",
       ],
-      default: "PLACED",
-    },
-
-    totalPrice: {
-      type: Number,
-      required: true,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-/* ===========================
-   AUTO ORDER ID
-=========================== */
-async function getNextSequenceValue(sequenceName) {
-  const sequenceDocument = await Counter.findOneAndUpdate(
-    { name: sequenceName },
-    { $inc: { sequence_value: 1 } },
-    { new: true, upsert: true }
-  );
-  return sequenceDocument.sequence_value;
-}
-
-orderSchema.pre("save", async function (next) {
-  if (this.isNew) {
-    const sequenceValue = await getNextSequenceValue("orderId");
-    this.orderId = `ORDR${sequenceValue.toString().padStart(5, "0")}`;
-  }
-  next();
+      deliveryLocation: {
+        latitude: { type: Number, required: true },
+        longitude: { type: Number, required: true },
+        address: { type: String },
+      },
+      pickupLocation: {
+        latitude: { type: Number, required: true },
+        longitude: { type: Number, required: true },
+        address: { type: String },
+      },
+      deliveryPersonLocation: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+        address: { type: String },
+      },
+      status: {
+        type: String,
+        enum: [
+          "available",
+          "pending",
+          "accepted",
+          "rejected",
+          "assigned",
+          "acceptedByRider",
+          "pickedUp",
+          "outForDelivery",
+          "confirmed",
+          "arriving",
+          "delivered",
+          "cancelled",
+        ],
+        default: "pending",
+      },
+      deliveryOtp: { type: String },
+      otpVerified: { type: Boolean, default: false },
+      rejectionReason: { type: String },
+      totalPrice: { type: Number, required: true },
+      createdAt: { type: Date, default: Date.now },
+      updatedAt: { type: Date, default: Date.now },
 });
 
-const Order = mongoose.model("Order", orderSchema);
-export default Order;
+orderSchema.index({ status: 1 });
+orderSchema.index({ shopOwner: 1, status: 1 });
+orderSchema.index({ deliveryPartner: 1, status: 1 });
+orderSchema.index({ customer: 1 });
+
+async function getNextSequenceValue(sequenceName) {
+    const sequenceDocument = await Counter.findOneAndUpdate(
+        { name: sequenceName },
+        { $inc: { sequence_value: 1 } },
+        { new: true, upsert: true }
+      );
+      return sequenceDocument.sequence_value;
+}
+
+orderSchema.pre('save',async function (next){
+    if(this.isNew){
+        const sequenceValue = await getNextSequenceValue("orderId");
+        this.orderId=`ORDR${sequenceValue.toString().padStart(5,'0')}`
+    }
+    this.updatedAt = Date.now();
+    next();
+});
+
+const Order = mongoose.model('Order',orderSchema)
+
+export default Order

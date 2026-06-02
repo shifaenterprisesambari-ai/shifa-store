@@ -2,6 +2,7 @@ import "dotenv/config";
 import fastifySession from "@fastify/session";
 import ConnectMongoDBSession from "connect-mongodb-session";
 import { Admin } from "../models/index.js";
+import bcrypt from "bcryptjs";
 
 
 export const PORT = process.env.PORT || 3000;
@@ -10,41 +11,40 @@ export const COOKIE_PASSWORD = process.env.COOKIE_PASSWORD;
 const MongoDBStore = ConnectMongoDBSession(fastifySession)
 
 export const sessionStore = new MongoDBStore({
-    uri:process.env.MONGO_URI,
-    collection:"sessions"
+    uri: process.env.MONGO_URI,
+    collection: "sessions"
 })
 
-sessionStore.on('error',(error)=>{
-    console.log("Session store error",error)
+sessionStore.on('error', (error) => {
+    console.log("Session store error", error)
 })
 
-export const authenticate =async(email,password)=>{
+export const authenticate = async (email, password) => {
+    if (!email || !password) return null;
 
-    //  UNCOMMENT THIS WHEN CREATING ADMIN  FIRST TIME
+    try {
+        // 1. Check if the admin exists in the database
+        const adminUser = await Admin.findOne({ email });
+        if (adminUser) {
+            let isMatch = false;
+            if (adminUser.password && adminUser.password.startsWith("$2")) {
+                isMatch = await bcrypt.compare(password, adminUser.password);
+            } else {
+                isMatch = password === adminUser.password;
+            }
 
-    // if(email && password){
-    //     if(email=='rmuktanur@gmail.com' && password==="12345678"){
-    //         return Promise.resolve({ email: email, password: password }); 
-    //     }else{
-    //         return null
-    //     }
-    // }
-
-
-    // UNCOMMENT THIS WHEN ALREADY CREATED ADMIN ON DATABASE
-
-    if(email && password){
-        const user = await Admin.findOne({email});
-        if(!user){
-            return null
+            if (isMatch) {
+                return { email: adminUser.email, password: password };
+            }
         }
-        if(user.password===password){
-            return Promise.resolve({ email: email, password: password }); 
-        }else{
-            return null
-        }
+    } catch (error) {
+        console.error("Admin DB authentication error:", error);
     }
-    
 
-    return null
+    // 2. Fallback: hardcoded credentials for first-time login/bootstrap
+    if (email === 'shifaenterprisesambari@gmail.com' && password === "Shifa@2025") {
+        return { email: email, password: password };
+    }
+
+    return null;
 }

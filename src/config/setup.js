@@ -7,58 +7,28 @@ import { dark, light, noSidebar } from "@adminjs/themes";
 
 AdminJS.registerAdapter(AdminJSMongoose)
 
-// export const admin = new AdminJS({
-//     resources:[
-//         {
-//             resource: Models.Customer,
-//             options: {
-//               listProperties: ["phone", "role", "isActivated"],
-//               filterProperties: ["phone", "role"],
-//             },
-//           },
-//           {
-//             resource: Models.DeliveryPartner,
-//             options: {
-//               listProperties: ["email", "role", "isActivated"],
-//               filterProperties: ["email", "role"],
-//             },
-//           },
-//           {
-//             resource: Models.Admin,
-//             options: {
-//               listProperties: ["email", "role", "isActivated"],
-//               filterProperties: ["email", "role"],
-//             },
-//           },
-//         { resource: Models.Branch },
-//         { resource: Models.Product },
-//         { resource: Models.Category },
-//         { resource: Models.Order },
-//         { resource: Models.Counter },
-//     ],
-//     branding: {
-//         companyName: "Grocery Delivery App",
-//         withMadeWithLove: false,
-//     },
-//     defaultTheme:dark.id,
-//     availableThemes: [dark,light,noSidebar],
-//     rootPath:'/admin'
-// })
-
 export const admin = new AdminJS({
   resources: [
     {
       resource: Models.Customer,
       options: {
-        listProperties: ["phone", "role", "isActivated"],
-        filterProperties: ["phone", "role"],
+        listProperties: ["name", "email", "plainPassword", "phone", "role", "isActivated"],
+        filterProperties: ["email", "phone", "role"],
+        properties: {
+          password: { isVisible: { list: false, show: false, edit: true, filter: false } },
+          plainPassword: { isVisible: { list: true, show: true, edit: false, filter: false } },
+        },
       },
     },
     {
       resource: Models.DeliveryPartner,
       options: {
-        listProperties: ["email","phone", "role", "isActivated"],
-        filterProperties: ["email", "role"],
+        listProperties: ["name", "email", "plainPassword", "phone", "role", "isActivated", "isAvailable"],
+        filterProperties: ["email", "role", "isAvailable"],
+        properties: {
+          password: { isVisible: { list: false, show: false, edit: true, filter: false } },
+          plainPassword: { isVisible: { list: true, show: true, edit: false, filter: false } },
+        },
       },
     },
     {
@@ -68,63 +38,56 @@ export const admin = new AdminJS({
         filterProperties: ["email", "role"],
       },
     },
-
-    // 🔹 NEW: ShopOwner
     {
       resource: Models.ShopOwner,
       options: {
-        listProperties: ["name", "email","phone", "role", "isActivated"],
-        filterProperties: ["name", "email", "role"],
-      },
-    },
-
-    // 🔹 NEW: Shop
-    {
-      resource: Models.Shop,
-      options: {
-        listProperties: ["name", "owner"],
-        filterProperties: ["name", "owner"],
+        listProperties: ["name", "email", "plainPassword", "phone", "role", "isActivated"],
+        filterProperties: ["email", "role"],
         properties: {
-          owner: {
-            reference: "ShopOwner", // tells AdminJS this is a relation
-          },
+          password: { isVisible: { list: false, show: false, edit: true, filter: false } },
+          plainPassword: { isVisible: { list: true, show: true, edit: false, filter: false } },
         },
       },
     },
-
     { resource: Models.Branch },
     { resource: Models.Product },
     { resource: Models.Category },
     { resource: Models.Order },
     { resource: Models.Counter },
+    {
+      resource: Models.Notification,
+      options: {
+        listProperties: ["recipientModel", "title", "type", "isRead", "createdAt"],
+        filterProperties: ["recipientModel", "type", "isRead"],
+      },
+    },
   ],
   branding: {
-    companyName: "Grocery Delivery App",
+    companyName: "Shifa Store",
     withMadeWithLove: false,
   },
   defaultTheme: dark.id,
   availableThemes: [dark, light, noSidebar],
-  rootPath: "/admin",
-});
+  rootPath: '/admin'
+})
 
-
-export const buildAdminRouter = async(app)=>{
-    await AdminJSFastify.buildAuthenticatedRouter(
-        admin,
-        {
-            authenticate,
-            cookiePassword:COOKIE_PASSWORD,
-            cookieName:'adminjs'
-        },
-        app,
-        {
-            store:sessionStore,
-            saveUnintialized: true,
-            secret: COOKIE_PASSWORD,
-            cookie: {
-              httpOnly: process.env.NODE_ENV === "production",
-              secure: process.env.NODE_ENV === "production",
-            },
-        }
-    )
+export const buildAdminRouter = async (app) => {
+  await AdminJSFastify.buildAuthenticatedRouter(
+    admin,
+    {
+      authenticate,
+      cookiePassword: COOKIE_PASSWORD,
+      cookieName: 'adminjs'
+    },
+    app,
+    {
+      store: sessionStore,
+      saveUninitialized: false,
+      secret: COOKIE_PASSWORD,
+      cookie: {
+        httpOnly: process.env.NODE_ENV === "production",
+        secure: process.env.NODE_ENV === "production",
+      },
+    }
+  )
 }

@@ -1,84 +1,114 @@
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 
-// Base fields shared by all user types
-const baseUserFields = {
-  name: { type: String },
-  role: {
-    type: String,
-    enum: ["Customer", "Admin", "DeliveryPartner", "ShopOwner"],
-    required: true,
-  },
-  isActivated: { type: Boolean, default: false },
-};
+// Base User Schema
+
+const userSchema = new mongoose.Schema({
+    name: { type : String },
+    role: {
+        type: String,
+        enum: ["Customer", "Admin", "DeliveryPartner", "ShopOwner"],
+        required: true,
+    },
+    isActivated: {type: Boolean, default: false}
+})
 
 // Customer Schema
+
 const customerSchema = new mongoose.Schema({
-  ...baseUserFields,
-  phone: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  liveLocation: {
-    latitude: { type: Number, default: 0 },
-    longitude: { type: Number, default: 0 },
-  },
-  address: { type: String, default: "" },
-});
+    ...userSchema.obj,
+    phone : { type: Number, unique: true, sparse: true },
+    email: { type: String, unique: true, sparse: true },
+    password: { type: String },
+    plainPassword: { type: String },
+    googleId: { type: String, unique: true, sparse: true },
+    role: { type: String, enum: ["Customer"], default: "Customer" },
+    liveLocation: {
+      latitude: { type: Number },
+      longitude: { type: Number },
+    },
+    address: { type: String },
+    addresses: [{
+      label: { type: String },
+      address: { type: String },
+      latitude: { type: Number },
+      longitude: { type: Number },
+      isDefault: { type: Boolean, default: false },
+    }],
+})
 
 // Delivery Partner Schema
 const deliveryPartnerSchema = new mongoose.Schema({
-  ...baseUserFields,
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  phone: { type: String, required: true, unique: true },
-  liveLocation: {
-    latitude: { type: Number },
-    longitude: { type: Number },
-  },
-  address: { type: String },
-  branch: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Branch",
-  },
-  isAvailable: { type: Boolean, default: true },
+    ...userSchema.obj,
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    plainPassword: { type: String },
+    phone: { type: Number, required: true },
+    role: { type: String, enum: ["DeliveryPartner"], default: "DeliveryPartner" },
+    liveLocation: {
+      latitude: { type: Number },
+      longitude: { type: Number },
+    },
+    address: { type: String },
+    branch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
+    },
+    isAvailable: { type: Boolean, default: true },
+  });
+
+// Shop Owner Schema
+
+const shopOwnerSchema = new mongoose.Schema({
+    ...userSchema.obj,
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    plainPassword: { type: String },
+    phone: { type: Number },
+    role: { type: String, enum: ["ShopOwner"], default: "ShopOwner" },
+    branch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
+    },
+    shop: { type: mongoose.Schema.Types.ObjectId },
 });
 
 // Admin Schema
+
 const adminSchema = new mongoose.Schema({
-  ...baseUserFields,
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, enum: ["Admin"], default: "Admin" },
+    ...userSchema.obj,
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, enum: ["Admin"], default: "Admin" },
 });
 
-// Shop Owner Schema
-const shopOwnerSchema = new mongoose.Schema({
-  ...baseUserFields,
-  email: { type: String, required: true, unique: true },
-  phone: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+// Hook to automatically hash passwords before saving
+const hashPasswordHook = async function (next) {
+  if (this.isModified("password") && this.password) {
+    // Avoid double hashing if already bcrypt hashed
+    if (!this.password.startsWith("$2")) {
+      // Store the plain text password in a visible field in the database
+      this.plainPassword = this.password;
+      try {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+      } catch (err) {
+        return next(err);
+      }
+    }
+  }
+  next();
+};
 
-  branch: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Branch",
-    required: true, // 🔥 shop owner must be under a branch
-  },
+customerSchema.pre("save", hashPasswordHook);
+deliveryPartnerSchema.pre("save", hashPasswordHook);
+shopOwnerSchema.pre("save", hashPasswordHook);
+adminSchema.pre("save", hashPasswordHook);
 
-  liveLocation: {
-    latitude: { type: Number },
-    longitude: { type: Number },
-  },
-  address: { type: String },
-  shop: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Shop",
-  },
-  role: { type: String, enum: ["ShopOwner"], default: "ShopOwner" },
-});
-
-// Named exports used everywhere in the project
 export const Customer = mongoose.model("Customer", customerSchema);
 export const DeliveryPartner = mongoose.model(
   "DeliveryPartner",
   deliveryPartnerSchema
 );
-export const Admin = mongoose.model("Admin", adminSchema);
 export const ShopOwner = mongoose.model("ShopOwner", shopOwnerSchema);
+export const Admin = mongoose.model("Admin", adminSchema);

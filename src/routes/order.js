@@ -4,7 +4,7 @@ import {
     getOrderById,
     getOrders,
     updateOrderStatus,
-    acceptOrderByShopOwner,
+    verifyDeliveryOtp,
   } from "../controllers/order/order.js";
 import { verifyToken } from "../middleware/auth.js";
   
@@ -20,7 +20,6 @@ export const orderRoutes = async (fastify, options) => {
     fastify.get("/order", getOrders);
     fastify.patch("/order/:orderId/status", updateOrderStatus);
     fastify.post("/order/:orderId/confirm", confirmOrder);
-    fastify.get('/order/:orderId', getOrderById); 
-    fastify.patch("/order/:orderId/shop-accept", acceptOrderByShopOwner);
+    fastify.get('/order/:orderId', getOrderById);
+    fastify.post('/order/:orderId/verify-otp', verifyDeliveryOtp);
 };
-  
