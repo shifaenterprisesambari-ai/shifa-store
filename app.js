@@ -10,7 +10,7 @@ import jwt from "jsonwebtoken";
 
 const start = async () => {
   await connectDB(process.env.MONGO_URI);
-  const app = fastify();
+  const app = fastify({ trustProxy: true });
 
   // Register CORS
   app.register(cors, {
