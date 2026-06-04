@@ -27,7 +27,8 @@ export const getAssignedOrders = async (req, reply) => {
       }
     }
 
-    const orders = await Order.find(query)
+    // Exclude deliveryOtp for security so riders cannot see it
+    const orders = await Order.find(query, { deliveryOtp: 0 })
       .populate("customer", "name phone email address")
       .populate("branch", "name address location")
       .populate("items.item")
@@ -56,8 +57,18 @@ export const acceptDelivery = async (req, reply) => {
       return reply.status(404).send({ message: "Delivery partner not found" });
     }
 
-    if (!rider.isAvailable) {
-      return reply.status(400).send({ message: "You are currently busy with another active delivery assignment" });
+    // Count how many active deliveries this rider currently has
+    const activeOrdersCount = await Order.countDocuments({
+      deliveryPartner: userId,
+      status: { $in: ["acceptedByRider", "pickedUp", "outForDelivery"] }
+    });
+
+    if (activeOrdersCount >= 3) {
+      if (rider.isAvailable) {
+        rider.isAvailable = false;
+        await rider.save();
+      }
+      return reply.status(400).send({ message: "You cannot have more than 3 active delivery assignments concurrently" });
     }
 
     // Find the available order
@@ -84,8 +95,9 @@ export const acceptDelivery = async (req, reply) => {
     }
     await order.save();
 
-    // Mark delivery partner as busy
-    rider.isAvailable = false;
+    // Mark delivery partner as busy if they reached the limit of 3 concurrent active assignments
+    const newActiveCount = activeOrdersCount + 1;
+    rider.isAvailable = newActiveCount < 3;
     await rider.save();
 
     const io = req.server.io;
@@ -112,9 +124,13 @@ export const acceptDelivery = async (req, reply) => {
       io,
     });
 
+    // Exclude deliveryOtp for security
+    const orderObj = order.toObject();
+    delete orderObj.deliveryOtp;
+
     return reply.send({
       message: "Delivery accepted and assigned to you",
-      order,
+      order: orderObj,
     });
   } catch (error) {
     console.error("FAILED TO ACCEPT DELIVERY:", error);
@@ -143,8 +159,8 @@ export const cancelDelivery = async (req, reply) => {
         .send({ message: "Order not found or not accepted by you" });
     }
 
-    // Can only cancel if it has not been picked up yet!
-    if (!["acceptedByRider", "assigned"].includes(order.status)) {
+    // Support cancellation in both pre-journey and mid-journey states
+    if (!["acceptedByRider", "assigned", "pickedUp", "outForDelivery"].includes(order.status)) {
       return reply.status(400).send({
         message: `Cannot cancel delivery with status: ${order.status}`
       });
@@ -155,7 +171,7 @@ export const cancelDelivery = async (req, reply) => {
     order.deliveryPartner = undefined;
     await order.save();
 
-    // Mark delivery partner as available again
+    // Mark delivery partner as available again since their active assignments count has decreased
     await DeliveryPartner.findByIdAndUpdate(userId, { isAvailable: true });
 
     const io = req.server.io;
@@ -177,9 +193,13 @@ export const cancelDelivery = async (req, reply) => {
       io,
     });
 
+    // Exclude deliveryOtp for security
+    const orderObj = order.toObject();
+    delete orderObj.deliveryOtp;
+
     return reply.send({
       message: "Delivery cancelled and released successfully",
-      order,
+      order: orderObj,
     });
   } catch (error) {
     console.error("FAILED TO CANCEL DELIVERY:", error);
@@ -235,7 +255,11 @@ export const pickupOrder = async (req, reply) => {
       io,
     });
 
-    return reply.send({ message: "Order picked up", order });
+    // Exclude deliveryOtp for security
+    const orderObj = order.toObject();
+    delete orderObj.deliveryOtp;
+
+    return reply.send({ message: "Order picked up", order: orderObj });
   } catch (error) {
     return reply
       .status(500)
@@ -289,7 +313,11 @@ export const startDelivery = async (req, reply) => {
       io,
     });
 
-    return reply.send({ message: "Delivery started", order });
+    // Exclude deliveryOtp for security
+    const orderObj = order.toObject();
+    delete orderObj.deliveryOtp;
+
+    return reply.send({ message: "Delivery started", order: orderObj });
   } catch (error) {
     return reply
       .status(500)
@@ -337,7 +365,7 @@ export const completeDelivery = async (req, reply) => {
     order.otpVerified = true;
     await order.save();
 
-    // Mark delivery partner as available again
+    // Mark delivery partner as available again since their active assignments count has decreased
     await DeliveryPartner.findByIdAndUpdate(userId, { isAvailable: true });
 
     const io = req.server.io;
@@ -383,7 +411,11 @@ export const completeDelivery = async (req, reply) => {
       io,
     });
 
-    return reply.send({ message: "Delivery completed successfully", order });
+    // Exclude deliveryOtp for security
+    const orderObj = order.toObject();
+    delete orderObj.deliveryOtp;
+
+    return reply.send({ message: "Delivery completed successfully", order: orderObj });
   } catch (error) {
     return reply
       .status(500)

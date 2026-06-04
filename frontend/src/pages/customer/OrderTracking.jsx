@@ -94,6 +94,15 @@ const OrderTracking = () => {
         )}
       </div>
 
+      {/* Delivery Verification OTP */}
+      {order.deliveryOtp && !['delivered', 'cancelled', 'rejected'].includes(order.status) && (
+        <div className="bg-primary/5 rounded-2xl border border-primary/20 p-5 mb-4 shadow-sm text-center">
+          <p className="text-xs text-primary font-bold uppercase tracking-wider">Delivery Verification OTP</p>
+          <p className="text-3xl font-black text-primary mt-2 tracking-widest">{order.deliveryOtp}</p>
+          <p className="text-[10px] text-text-secondary mt-2">Provide this 4-digit OTP to the delivery partner when they arrive.</p>
+        </div>
+      )}
+
       {/* Delivery Partner Info */}
       {order.deliveryPartner && (
         <div className="bg-white rounded-2xl border border-border/30 p-5 mb-4 shadow-sm">

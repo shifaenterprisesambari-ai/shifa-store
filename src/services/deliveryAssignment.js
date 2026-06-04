@@ -1,6 +1,6 @@
 import { DeliveryPartner } from "../models/user.js";
 import Order from "../models/order.js";
-import { generateOtp, hashOtp } from "./otpService.js";
+import { generateOtp } from "./otpService.js";
 import { createNotification } from "./notificationService.js";
 
 /**
@@ -14,13 +14,12 @@ import { createNotification } from "./notificationService.js";
  */
 export const assignDeliveryPartner = async ({ order, io }) => {
   try {
-    // Generate and hash OTP for delivery verification
+    // Generate plain OTP for delivery verification
     const plainOtp = generateOtp();
-    const hashedOtp = await hashOtp(plainOtp);
 
     // Update the order to available state
     order.status = "available";
-    order.deliveryOtp = hashedOtp;
+    order.deliveryOtp = plainOtp;
     order.deliveryPartner = undefined; // Ensure no rider is assigned initially
     await order.save();
 

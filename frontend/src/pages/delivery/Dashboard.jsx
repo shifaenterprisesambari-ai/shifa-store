@@ -71,7 +71,15 @@ const DeliveryDashboard = () => {
       }
       load();
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Action failed');
+      const status = e.response?.status;
+      const msg = e.response?.data?.message;
+      if (status === 400 && action === 'complete') {
+        toast.error(msg === 'Invalid OTP' ? '❌ Wrong OTP. Please ask the customer for the correct code.' : (msg || 'Cannot complete delivery'));
+      } else if (status === 403) {
+        toast.error('Session error — please log out and log back in.');
+      } else {
+        toast.error(msg || 'Action failed. Please try again.');
+      }
     }
   };
 
@@ -236,7 +244,7 @@ const DeliveryDashboard = () => {
                     )}
 
                     {/* Rider Cancellation Option */}
-                    {['assigned', 'acceptedByRider'].includes(order.status) && order.deliveryPartner === user?._id && (
+                    {['assigned', 'acceptedByRider', 'pickedUp', 'outForDelivery'].includes(order.status) && order.deliveryPartner === user?._id && (
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => handleAction(order._id, 'cancel')}

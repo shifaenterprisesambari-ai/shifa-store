@@ -25,5 +25,20 @@ export const hashOtp = async (otp) => {
  * @returns {Promise<boolean>}
  */
 export const verifyOtp = async (plainOtp, hashedOtp) => {
-  return bcrypt.compare(plainOtp, hashedOtp);
+  if (!plainOtp || !hashedOtp) return false;
+  const p = String(plainOtp).trim();
+  const h = String(hashedOtp).trim();
+
+  // If the stored value looks like a bcrypt hash, compare using bcrypt
+  if (h.startsWith("$2a$") || h.startsWith("$2b$") || h.startsWith("$2y$")) {
+    try {
+      return await bcrypt.compare(p, h);
+    } catch (err) {
+      console.error("Bcrypt compare error:", err);
+      return false;
+    }
+  }
+
+  // Otherwise, fallback to plain text comparison
+  return p === h;
 };
