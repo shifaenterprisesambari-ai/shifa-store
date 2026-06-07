@@ -85,8 +85,9 @@ export const buildAdminRouter = async (app) => {
       saveUninitialized: false,
       secret: COOKIE_PASSWORD,
       cookie: {
-        httpOnly: process.env.NODE_ENV === "production",
+        httpOnly: true,
         secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       },
     }
   )

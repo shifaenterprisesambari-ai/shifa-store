@@ -94,13 +94,16 @@ const Login = () => {
             <div>
               <label className="text-sm font-medium text-text-secondary mb-1.5 block">Password</label>
               <div className="relative">
-                <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4" />
+                <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4 pointer-events-none" />
                 <input {...register('password', { required: 'Password is required' })}
                   type={showPwd ? 'text' : 'password'} placeholder="Enter your password"
                   className="w-full pl-10 pr-10 py-3 bg-bg-secondary rounded-xl text-sm border border-transparent focus:border-primary/30 focus:bg-white focus:outline-none transition-all" />
-                <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-tertiary">
-                  {showPwd ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
-                </button>
+                <span
+                  onTouchEnd={(e) => { e.preventDefault(); setShowPwd(!showPwd); }}
+                  onClick={() => setShowPwd(!showPwd)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-text-tertiary cursor-pointer select-none z-10">
+                  {showPwd ? <FiEyeOff className="w-4 h-4 pointer-events-none" /> : <FiEye className="w-4 h-4 pointer-events-none" />}
+                </span>
               </div>
               {errors.password && <p className="text-error text-xs mt-1">{errors.password.message}</p>}
             </div>
