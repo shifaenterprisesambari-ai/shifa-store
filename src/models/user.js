@@ -71,6 +71,10 @@ const shopOwnerSchema = new mongoose.Schema({
       ref: "Branch",
     },
     shop: { type: mongoose.Schema.Types.ObjectId },
+    // Personal store identity — independent of the shared Branch document
+    shopName: { type: String },       // owner's own store brand name
+    shopImage: { type: String },      // owner's own store photo/logo URL
+    shopAddress: { type: String },    // owner's own store address
 });
 
 // Admin Schema

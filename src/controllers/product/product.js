@@ -20,11 +20,28 @@ export const getProductsByCategoryId = async (req, reply) => {
 };
 
 /**
- * Fetch all available branches (stores).
+ * Fetch all shop owners as individual stores, enriched with branch info.
+ * Each ShopOwner represents a distinct store in the "Popular Stores Near You" section.
  */
 export const getAllStores = async (req, reply) => {
   try {
-    const stores = await Branch.find().exec();
+    const shopOwners = await ShopOwner.find()
+      .populate("branch", "name image address location")
+      .lean()
+      .exec();
+
+    // Shape each shop owner into a store object for the frontend.
+    // Priority: owner's personal store fields → shared branch fields → owner login name
+    const stores = shopOwners.map((so) => ({
+      _id: so._id,
+      shopId: so.shop,
+      name: so.shopName || so.name,          // personal store name → owner name fallback
+      image: so.shopImage || so.branch?.image || null,  // personal photo → branch photo
+      address: so.shopAddress || so.branch?.address || null,
+      location: so.branch?.location || null,
+      branchName: so.branch?.name || null,
+    }));
+
     return reply.send(stores);
   } catch (error) {
     console.error("FAILED TO GET STORES:", error);
@@ -33,23 +50,25 @@ export const getAllStores = async (req, reply) => {
 };
 
 /**
- * Fetch all enabled/available products belonging to a branch (store) ID.
+ * Fetch all enabled/available products belonging to a shop owner (store).
+ * The :storeId param is the ShopOwner's _id.
  */
 export const getProductsByStoreId = async (req, reply) => {
-  const { branchId } = req.params;
+  const { branchId: storeId } = req.params;
 
   try {
-    // 1. Find all shop owners assigned to this branch
-    const shopOwners = await ShopOwner.find({ branch: branchId }).select("_id shop");
-    
-    // Map both the user _ids and any custom shop IDs assigned to them
-    const shopIds = [];
-    shopOwners.forEach((so) => {
-      shopIds.push(so._id);
-      if (so.shop) shopIds.push(so.shop);
-    });
+    // Find the shop owner to get their custom shop ID
+    const shopOwner = await ShopOwner.findById(storeId).select("_id shop").lean();
 
-    // 2. Query products whose 'shop' field matches any of these IDs
+    if (!shopOwner) {
+      return reply.status(404).send({ message: "Store not found" });
+    }
+
+    // Build list of IDs to match against products.shop
+    // Products may have been saved with either the shopOwner._id or shopOwner.shop
+    const shopIds = [shopOwner._id];
+    if (shopOwner.shop) shopIds.push(shopOwner.shop);
+
     const products = await Product.find({
       shop: { $in: shopIds },
       isEnabled: true,

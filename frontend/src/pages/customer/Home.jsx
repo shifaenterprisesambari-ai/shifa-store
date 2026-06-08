@@ -80,11 +80,10 @@ const Home = () => {
   const allProducts = Object.values(productsByCategory).flat();
   const hasProducts = allProducts.length > 0;
 
-  // Enrich database stores with rating, time, and photo URL fallback
+  // Enrich database stores with a fallback rating and image if not set
   const activeStores = (stores && stores.length > 0 ? stores : DEMO_SHOPS).map((shop, i) => ({
     ...shop,
     rating: shop.rating || [4.8, 4.5, 4.3, 4.6, 4.4][i % 5],
-    deliveryTime: shop.deliveryTime || ['15-20 min', '20-30 min', '25-35 min', '15-25 min', '20-30 min'][i % 5],
     image: shop.image || [
       'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400',
       'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400',
@@ -364,15 +363,12 @@ const Home = () => {
               </div>
               <div className="p-4">
                 <h3 className="text-sm font-bold text-text line-clamp-1">{shop.name}</h3>
+                {shop.address && (
+                  <p className="text-[10px] text-text-tertiary font-medium mt-0.5 line-clamp-1">📍 {shop.address}</p>
+                )}
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-[10px] font-extrabold text-[#E59400] bg-orange-50 px-2 py-0.5 rounded-lg flex items-center gap-0.5">
                     ⭐ {shop.rating}
-                  </span>
-                  <span className="text-[10px] font-semibold text-text-secondary bg-bg-secondary px-2 py-0.5 rounded-lg">
-                    🕐 {shop.deliveryTime}
-                  </span>
-                  <span className="text-[10px] font-semibold text-text-tertiary">
-                    • {['1.2 km', '0.8 km', '2.5 km', '1.7 km'][i % 4]}
                   </span>
                 </div>
               </div>
@@ -465,10 +461,11 @@ const Home = () => {
                   <span className="text-[10px] text-white/80 font-medium">• Verified Partner</span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-black mt-1.5">{activeStore.name}</h2>
-                <p className="text-xs text-white/90 mt-1 flex items-center gap-1">📍 {activeStore.address || 'Local branch'}</p>
+                {activeStore.address && (
+                  <p className="text-xs text-white/90 mt-1 flex items-center gap-1">📍 {activeStore.address}</p>
+                )}
                 <div className="flex items-center gap-3 mt-3">
                   <span className="text-[10px] font-black text-[#E59400] bg-orange-50/10 px-2 py-0.5 rounded-lg">⭐ {activeStore.rating}</span>
-                  <span className="text-[10px] font-bold text-white/90 bg-white/10 px-2 py-0.5 rounded-lg">🕐 {activeStore.deliveryTime}</span>
                 </div>
               </div>
               

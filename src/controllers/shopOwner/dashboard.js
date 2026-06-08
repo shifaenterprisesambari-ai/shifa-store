@@ -62,6 +62,17 @@ export const getDashboardStats = async (req, reply) => {
     const totalRevenue =
       revenueResult.length > 0 ? revenueResult[0].totalRevenue : 0;
 
+    // Build a store-info object using the owner's own personal fields first,
+    // falling back to the shared branch data for location/address.
+    const branchDoc = branchId ? await Branch.findById(branchId).lean() : null;
+    const storeInfo = {
+      name: shopOwner.shopName || branchDoc?.name || null,
+      image: shopOwner.shopImage || branchDoc?.image || null,
+      address: shopOwner.shopAddress || branchDoc?.address || null,
+      location: branchDoc?.location || null,
+      branchId: branchId || null,
+    };
+
     return reply.send({
       products: {
         total: totalProducts,
@@ -74,7 +85,7 @@ export const getDashboardStats = async (req, reply) => {
         delivered: deliveredOrders,
       },
       revenue: totalRevenue,
-      branch: branchId ? await Branch.findById(branchId) : null,
+      branch: storeInfo,
     });
   } catch (error) {
     console.error("FAILED TO FETCH DASHBOARD STATS:", error);
@@ -97,30 +108,31 @@ export const updateShopSettings = async (req, reply) => {
       return reply.status(404).send({ message: "Shop Owner not found" });
     }
 
-    if (!shopOwner.branch) {
-      return reply.status(400).send({ message: "No branch assigned to this shop owner" });
+    // Save personal store branding directly on the ShopOwner document.
+    // This avoids overwriting the shared Branch that all owners reference.
+    if (name !== undefined) shopOwner.shopName = name;
+    if (address !== undefined) shopOwner.shopAddress = address;
+    if (image !== undefined) shopOwner.shopImage = image;
+    await shopOwner.save();
+
+    // Also update branch location coordinates if provided (branch = physical location, shared is fine)
+    if ((latitude !== undefined || longitude !== undefined) && shopOwner.branch) {
+      const branch = await Branch.findById(shopOwner.branch);
+      if (branch) {
+        if (!branch.location) branch.location = {};
+        if (latitude !== undefined) branch.location.latitude = Number(latitude);
+        if (longitude !== undefined) branch.location.longitude = Number(longitude);
+        await branch.save();
+      }
     }
-
-    const branch = await Branch.findById(shopOwner.branch);
-    if (!branch) {
-      return reply.status(404).send({ message: "Branch not found" });
-    }
-
-    if (name !== undefined) branch.name = name;
-    if (address !== undefined) branch.address = address;
-    if (image !== undefined) branch.image = image;
-
-    if (latitude !== undefined || longitude !== undefined) {
-      if (!branch.location) branch.location = {};
-      if (latitude !== undefined) branch.location.latitude = Number(latitude);
-      if (longitude !== undefined) branch.location.longitude = Number(longitude);
-    }
-
-    await branch.save();
 
     return reply.send({
       message: "Shop settings updated successfully",
-      branch,
+      branch: {
+        name: shopOwner.shopName,
+        image: shopOwner.shopImage,
+        address: shopOwner.shopAddress,
+      },
     });
   } catch (error) {
     console.error("FAILED TO UPDATE SHOP SETTINGS:", error);

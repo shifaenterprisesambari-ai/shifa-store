@@ -41,16 +41,37 @@ export const admin = new AdminJS({
     {
       resource: Models.ShopOwner,
       options: {
-        listProperties: ["name", "email", "plainPassword", "phone", "role", "isActivated"],
-        filterProperties: ["email", "role"],
+        listProperties: ["name", "email", "shopName", "phone", "role", "isActivated"],
+        showProperties: ["name", "email", "shopName", "shopImage", "shopAddress", "phone", "role", "branch", "shop", "isActivated"],
+        editProperties: ["name", "email", "password", "shopName", "shopImage", "shopAddress", "phone", "branch", "shop", "isActivated"],
+        filterProperties: ["email", "role", "shopName"],
         properties: {
           password: { isVisible: { list: false, show: false, edit: true, filter: false } },
           plainPassword: { isVisible: { list: true, show: true, edit: false, filter: false } },
+          shopName: { label: "Store Name" },
+          shopImage: { label: "Store Photo URL" },
+          shopAddress: { label: "Store Address" },
         },
       },
     },
     { resource: Models.Branch },
-    { resource: Models.Product },
+    {
+      resource: Models.Product,
+      options: {
+        listProperties: ["name", "shop", "category", "price", "stockQuantity", "isEnabled", "isAvailable"],
+        showProperties: ["name", "shop", "category", "price", "discountPrice", "quantity", "stockQuantity", "isEnabled", "isAvailable", "description", "image"],
+        editProperties: ["name", "shop", "category", "price", "discountPrice", "quantity", "stockQuantity", "isEnabled", "isAvailable", "description", "image", "images"],
+        filterProperties: ["shop", "category", "isEnabled", "isAvailable"],
+        properties: {
+          shop: {
+            reference: "ShopOwner",
+            label: "Shop Owner",
+            isVisible: { list: true, show: true, edit: true, filter: true },
+          },
+          image: { label: "Main Image URL" },
+        },
+      },
+    },
     { resource: Models.Category },
     { resource: Models.Order },
     { resource: Models.Counter },

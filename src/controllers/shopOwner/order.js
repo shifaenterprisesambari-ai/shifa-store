@@ -1,5 +1,4 @@
 import Order from "../../models/order.js";
-import { ShopOwner } from "../../models/user.js";
 import { assignDeliveryPartner } from "../../services/deliveryAssignment.js";
 import { createNotification } from "../../services/notificationService.js";
 
@@ -11,18 +10,10 @@ export const getShopOrders = async (req, reply) => {
     const { userId } = req.user;
     const { status } = req.query;
 
-    const shopOwner = await ShopOwner.findById(userId);
-    const branchId = shopOwner?.branch;
-
-    const query = {
-      $or: [
-        { shopOwner: userId },
-        ...(branchId ? [{ branch: branchId }] : [])
-      ]
-    };
-    if (status) {
-      query.status = status;
-    }
+    // Query only this specific shop owner's orders — do NOT include the shared
+    // branch condition, which would leak other owners' orders to each other.
+    const query = { shopOwner: userId };
+    if (status) query.status = status;
 
     const orders = await Order.find(query)
       .populate("customer", "name phone email")
@@ -47,15 +38,9 @@ export const acceptOrder = async (req, reply) => {
     const { userId } = req.user;
     const { orderId } = req.params;
 
-    const shopOwner = await ShopOwner.findById(userId);
-    const branchId = shopOwner?.branch;
-
     const order = await Order.findOne({ 
       _id: orderId, 
-      $or: [
-        { shopOwner: userId },
-        ...(branchId ? [{ branch: branchId }] : [])
-      ]
+      shopOwner: userId,
     });
 
     if (!order) {
@@ -124,15 +109,9 @@ export const rejectOrder = async (req, reply) => {
     const { orderId } = req.params;
     const { reason } = req.body;
 
-    const shopOwner = await ShopOwner.findById(userId);
-    const branchId = shopOwner?.branch;
-
     const order = await Order.findOne({ 
       _id: orderId, 
-      $or: [
-        { shopOwner: userId },
-        ...(branchId ? [{ branch: branchId }] : [])
-      ]
+      shopOwner: userId,
     });
 
     if (!order) {
