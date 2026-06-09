@@ -151,8 +151,9 @@ const Home = () => {
         </div>
       </section>
 
+      <div className="h-6 sm:h-8 w-full" />
       {/* Quick Info Bar */}
-      <section className="px-2 sm:px-4 mt-10 sm:mt-14">
+      <section className="px-2 sm:px-4">
         <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide py-1">
           {[
             { icon: <FiZap className="w-4 h-4 text-primary" />, text: '10 Min Delivery' },
@@ -166,8 +167,9 @@ const Home = () => {
         </div>
       </section>
 
+      <div className="h-6 sm:h-8 w-full" />
       {/* Categories */}
-      <section className="px-2 sm:px-4 mt-12 sm:mt-16">
+      <section className="px-2 sm:px-4">
         <h2 className="text-lg font-bold text-text mb-4">Shop by Category</h2>
         {loading ? <SkeletonCategoryRow /> : (
           <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
@@ -192,8 +194,9 @@ const Home = () => {
         )}
       </section>
 
+      <div className="h-8 sm:h-12 w-full" />
       {/* Deals - Premium Improved Section */}
-      <section className="px-0 sm:px-4 mt-16 sm:mt-22">
+      <section className="px-0 sm:px-4">
         <div className="bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent px-3 py-5 sm:p-5 rounded-none sm:rounded-3xl border-x-0 sm:border border-orange-100/50">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">
@@ -316,7 +319,9 @@ const Home = () => {
           };
 
           return (
-            <section key={cat._id} className="px-2 sm:px-4 mt-18 sm:mt-24">
+            <div key={cat._id}>
+              <div className="h-8 sm:h-12 w-full" />
+              <section className="px-2 sm:px-4">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-lg font-black text-text tracking-tight flex items-center gap-2">
@@ -337,12 +342,14 @@ const Home = () => {
                 ))}
               </div>
             </section>
+          </div>
           );
         })
       )}
 
+      <div className="h-8 sm:h-12 w-full" />
       {/* Popular Stores */}
-      <section className="px-2 sm:px-4 mt-20 sm:mt-28">
+      <section className="px-2 sm:px-4">
         <div className="mb-5">
           <h2 className="text-lg font-black text-text tracking-tight">🏪 Popular Stores Near You</h2>
           <p className="text-[10px] text-text-tertiary font-semibold mt-0.5">Top-rated local grocery hubs</p>
@@ -389,7 +396,9 @@ const Home = () => {
 
       {/* Trending Products */}
       {!loading && (
-        <section className="px-2 sm:px-4 mt-20 sm:mt-28">
+        <>
+          <div className="h-8 sm:h-12 w-full" />
+          <section className="px-2 sm:px-4">
           <div className="mb-5">
             <h2 className="text-lg font-black text-text tracking-tight">📈 Trending Products</h2>
             <p className="text-[10px] text-text-tertiary font-semibold mt-0.5">Top picks by local shoppers</p>
@@ -402,10 +411,12 @@ const Home = () => {
             ))}
           </div>
         </section>
+      </>
       )}
 
+      <div className="h-12 sm:h-16 w-full" />
       {/* Offers & Coupons Banner - High-fidelity design */}
-      <section className="px-0 sm:px-4 mt-36 sm:mt-52 mb-36 sm:mb-52">
+      <section className="px-0 sm:px-4 mb-36 sm:mb-52">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
