@@ -104,9 +104,9 @@ const Home = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -80 }}
             transition={{ duration: 0.5 }}
-            className={`w-full py-32 sm:py-40 px-6 sm:px-16 bg-gradient-to-r ${HERO_BANNERS[activeBanner].gradient}`}
+            className={`w-full h-[240px] sm:h-[320px] px-6 sm:px-16 bg-gradient-to-r ${HERO_BANNERS[activeBanner].gradient} flex items-center`}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between w-full">
               <div className="flex flex-col items-start max-w-xs">
                 <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-white/80 text-sm font-black tracking-wider uppercase">
                   🔥 Shifa Special Offer
