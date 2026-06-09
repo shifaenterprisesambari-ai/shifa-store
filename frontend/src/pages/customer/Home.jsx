@@ -47,7 +47,7 @@ const Home = () => {
       // Load products for each category
       const productsMap = {};
       await Promise.all(
-        cats.slice(0, 4).map(async (cat) => {
+        cats.map(async (cat) => {
           try {
             const { data } = await productService.getProductsByCategory(cat._id);
             productsMap[cat._id] = data;
@@ -192,7 +192,7 @@ const Home = () => {
         )}
       </section>
 
-      {/* Flash Sale - Premium Improved Section */}
+      {/* Deals - Premium Improved Section */}
       <section className="px-2 sm:px-4 mt-10 sm:mt-14">
         <div className="bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent p-5 rounded-3xl border border-orange-100/50">
           <div className="flex items-center justify-between mb-5">
@@ -200,9 +200,9 @@ const Home = () => {
               <span className="text-xl animate-bounce">⚡</span>
               <div>
                 <h2 className="text-lg font-black text-text tracking-tight flex items-center gap-2">
-                  Flash Deals <span className="text-error font-black animate-pulse">LIVE</span>
+                  Deals <span className="text-error font-black animate-pulse">LIVE</span>
                 </h2>
-                <p className="text-[10px] text-text-secondary font-medium">Limited stock, ending soon!</p>
+                <p className="text-[10px] text-text-secondary font-medium">Top offers, ending soon!</p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 bg-white border border-orange-100 rounded-full shadow-sm">
@@ -212,17 +212,20 @@ const Home = () => {
           </div>
 
           <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
-            {FLASH_SALE_ITEMS.map((item, i) => {
+            {(allProducts.length > 0 ? allProducts : FLASH_SALE_ITEMS).map((item, i) => {
               const soldPercent = [78, 45, 88, 62][i % 4];
+              const salePrice = item.price;
+              const originalPrice = item.discountPrice || item.originalPrice || Math.round(item.price * 1.25);
+              const discount = item.discount || Math.round(((originalPrice - salePrice) / originalPrice) * 100);
               const cartProduct = {
                 ...item,
-                _id: `flash-${i}`,
-                id: `flash-${i}`,
-                quantity: '1 unit',
+                _id: item._id || `flash-${i}`,
+                id: item.id || item._id || `flash-${i}`,
+                quantity: item.quantity || '1 unit',
               };
               return (
                 <motion.div
-                  key={i}
+                  key={item._id || i}
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.08 }}
@@ -232,15 +235,17 @@ const Home = () => {
                   <div>
                     {/* Badge & Image */}
                     <div className="relative mb-3 flex items-center justify-center bg-bg-secondary rounded-xl p-2.5 h-28 overflow-hidden">
-                      <div className="absolute top-1 left-1 px-2 py-0.5 bg-gradient-to-r from-red-500 to-orange-500 text-white text-[9px] font-extrabold rounded-lg shadow-sm z-10">
-                        {item.discount}% OFF
-                      </div>
+                      {discount > 0 && (
+                        <div className="absolute top-1 left-1 px-2 py-0.5 bg-gradient-to-r from-red-500 to-orange-500 text-white text-[9px] font-extrabold rounded-lg shadow-sm z-10">
+                          {discount}% OFF
+                        </div>
+                      )}
                       <img
                         src={item.image}
                         alt={item.name}
                         className="w-full h-full object-contain hover:scale-105 transition-transform duration-300"
                         loading="lazy"
-                        onError={(e) => { e.target.src = '/amul_moti.jpg'; }}
+                        onError={(e) => { e.target.src = '/logo.png'; }}
                       />
                     </div>
 
@@ -249,8 +254,10 @@ const Home = () => {
                     
                     {/* Price and Timer */}
                     <div className="flex items-baseline gap-1.5 mt-1.5">
-                      <span className="text-sm font-extrabold text-text">₹{item.price}</span>
-                      <span className="text-[10px] text-text-tertiary line-through font-medium">₹{item.originalPrice}</span>
+                      <span className="text-sm font-extrabold text-text">₹{salePrice}</span>
+                      {originalPrice > salePrice && (
+                        <span className="text-[10px] text-text-tertiary line-through font-medium">₹{originalPrice}</span>
+                      )}
                     </div>
 
                     {/* Stock Progress Bar */}
@@ -269,7 +276,7 @@ const Home = () => {
                   </div>
 
                   <div className="mt-4 pt-2.5 border-t border-dashed border-gray-100 flex items-center justify-between">
-                    <span className="text-[9px] text-error font-extrabold flex items-center gap-0.5 uppercase">⏰ {item.timeLeft}</span>
+                    <span className="text-[9px] text-error font-extrabold flex items-center gap-0.5 uppercase">⏰ {item.timeLeft || '15 mins'}</span>
                     <button
                       onClick={() => {
                         dispatch(addToCart(cartProduct));
@@ -380,17 +387,17 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Demo Products if DB empty */}
-      {!hasProducts && !loading && (
+      {/* Trending Products */}
+      {!loading && (
         <section className="px-2 sm:px-4 mt-14 sm:mt-20">
           <div className="mb-5">
             <h2 className="text-lg font-black text-text tracking-tight">📈 Trending Products</h2>
             <p className="text-[10px] text-text-tertiary font-semibold mt-0.5">Top picks by local shoppers</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-            {DEMO_PRODUCTS.slice(0, 10).map((p, i) => (
-              <div key={i} className="w-full flex flex-col">
-                <ProductCard product={{ ...p, image: '/amul_moti.jpg', _id: `demo-${i}`, id: `demo-${i}` }} index={i} />
+            {(allProducts.length > 0 ? allProducts : DEMO_PRODUCTS).slice(0, 10).map((p, i) => (
+              <div key={p._id || i} className="w-full flex flex-col">
+                <ProductCard product={p} index={i} />
               </div>
             ))}
           </div>

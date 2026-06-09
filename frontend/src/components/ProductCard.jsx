@@ -42,7 +42,7 @@ const ProductCard = ({ product, index = 0 }) => {
           alt={product.name}
           className="w-full h-24 sm:h-36 object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
-          onError={(e) => { e.target.src = '/amul_moti.jpg'; }}
+          onError={(e) => { e.target.src = '/logo.png'; }}
         />
       </div>
 
