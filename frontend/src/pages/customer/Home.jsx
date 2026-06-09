@@ -96,8 +96,8 @@ const Home = () => {
   return (
     <div className="w-full max-w-7xl mx-auto">
       {/* Hero Banner */}
-      <section className="px-0 sm:px-4 pt-0 sm:pt-6">
-        <div className="relative overflow-hidden rounded-none sm:rounded-[16px] shadow-md shadow-orange-500/5">
+      <section className="px-2.5 sm:px-4 pt-2 sm:pt-6">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-[16px] shadow-md shadow-orange-500/5">
           <motion.div
             key={activeBanner}
             initial={{ opacity: 0, x: 80 }}
@@ -153,7 +153,7 @@ const Home = () => {
 
       <div className="h-10 sm:h-14 w-full" />
       {/* Quick Info Bar */}
-      <section className="px-2 sm:px-4">
+      <section className="px-2.5 sm:px-4">
         <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide py-1">
           {[
             { icon: <FiZap className="w-4 h-4 text-primary" />, text: '10 Min Delivery' },
@@ -169,7 +169,7 @@ const Home = () => {
 
       <div className="h-10 sm:h-14 w-full" />
       {/* Categories */}
-      <section className="px-2 sm:px-4">
+      <section className="px-2.5 sm:px-4">
         <h2 className="text-lg font-bold text-text mb-4">Shop by Category</h2>
         {loading ? <SkeletonCategoryRow /> : (
           <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
@@ -196,8 +196,8 @@ const Home = () => {
 
       <div className="h-14 sm:h-20 w-full" />
       {/* Deals - Premium Improved Section */}
-      <section className="px-0 sm:px-4">
-        <div className="bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent px-3 py-5 sm:p-5 rounded-none sm:rounded-3xl border-x-0 sm:border border-orange-100/50">
+      <section className="px-2.5 sm:px-4">
+        <div className="bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent px-3.5 py-5 sm:p-5 rounded-2xl sm:rounded-3xl border border-orange-100/50">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">
               <span className="text-xl animate-bounce">⚡</span>
@@ -321,7 +321,7 @@ const Home = () => {
           return (
             <div key={cat._id}>
               <div className="h-14 sm:h-20 w-full" />
-              <section className="px-2 sm:px-4">
+              <section className="px-2.5 sm:px-4">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-lg font-black text-text tracking-tight flex items-center gap-2">
@@ -349,7 +349,7 @@ const Home = () => {
 
       <div className="h-14 sm:h-20 w-full" />
       {/* Popular Stores */}
-      <section className="px-2 sm:px-4">
+      <section className="px-2.5 sm:px-4">
         <div className="mb-5">
           <h2 className="text-lg font-black text-text tracking-tight">🏪 Popular Stores Near You</h2>
           <p className="text-[10px] text-text-tertiary font-semibold mt-0.5">Top-rated local grocery hubs</p>
@@ -398,7 +398,7 @@ const Home = () => {
       {!loading && (
         <>
           <div className="h-14 sm:h-20 w-full" />
-          <section className="px-2 sm:px-4">
+          <section className="px-2.5 sm:px-4">
           <div className="mb-5">
             <h2 className="text-lg font-black text-text tracking-tight">📈 Trending Products</h2>
             <p className="text-[10px] text-text-tertiary font-semibold mt-0.5">Top picks by local shoppers</p>
@@ -416,12 +416,12 @@ const Home = () => {
 
       <div className="h-20 sm:h-28 w-full" />
       {/* Offers & Coupons Banner - High-fidelity design */}
-      <section className="px-0 sm:px-4 mb-36 sm:mb-52">
+      <section className="px-2.5 sm:px-4 mb-36 sm:mb-52">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="bg-gradient-to-br from-[#FF7A00] via-[#FF9A1F] to-[#FFC400] relative overflow-hidden rounded-none sm:rounded-[22px] px-4 py-8 sm:p-12 text-white shadow-2xl shadow-orange-500/10 border-x-0 sm:border border-white/10"
+          className="bg-gradient-to-br from-[#FF7A00] via-[#FF9A1F] to-[#FFC400] relative overflow-hidden rounded-2xl sm:rounded-[22px] px-4 py-8 sm:p-12 text-white shadow-2xl shadow-orange-500/10 border border-white/10"
         >
           {/* Background shapes */}
           <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-white/10 blur-2xl"></div>
