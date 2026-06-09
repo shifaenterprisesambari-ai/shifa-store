@@ -104,10 +104,10 @@ const Home = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -80 }}
             transition={{ duration: 0.5 }}
-            className={`w-full h-[240px] sm:h-[320px] px-6 sm:px-16 bg-gradient-to-r ${HERO_BANNERS[activeBanner].gradient} flex items-center`}
+            className={`w-full h-[240px] sm:h-[320px] px-8 sm:px-16 bg-gradient-to-r ${HERO_BANNERS[activeBanner].gradient} flex items-center`}
           >
             <div className="flex items-center justify-between w-full">
-              <div className="flex flex-col items-start max-w-xs">
+              <div className="flex flex-col items-center text-center sm:items-start sm:text-left max-w-xs sm:max-w-md mx-auto sm:mx-0">
                 <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-white/80 text-sm font-black tracking-wider uppercase">
                   🔥 Shifa Special Offer
                 </motion.span>
