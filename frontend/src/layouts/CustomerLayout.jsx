@@ -5,10 +5,10 @@ import Footer from '../components/layout/Footer';
 import NotificationPanel from '../components/NotificationPanel';
 
 const CustomerLayout = () => (
-  <div className="min-h-screen bg-bg flex flex-col">
+  <div className="w-full min-h-screen bg-bg flex flex-col">
     <Navbar />
     <NotificationPanel />
-    <main className="flex-1 pb-20 md:pb-0">
+    <main className="w-full flex-1 pb-20 md:pb-0">
       <Outlet />
     </main>
     <Footer />

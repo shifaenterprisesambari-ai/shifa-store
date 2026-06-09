@@ -94,7 +94,7 @@ const Home = () => {
   }));
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto">
       {/* Hero Banner */}
       <section className="px-0 sm:px-4 pt-0 sm:pt-6">
         <div className="relative overflow-hidden rounded-none sm:rounded-[16px] shadow-md shadow-orange-500/5">

@@ -9,7 +9,7 @@ const Wishlist = () => {
   const items = useSelector(selectWishlistItems);
 
   return (
-    <div className="max-w-7xl mx-auto px-2 sm:px-4 py-6">
+    <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-6">
       <h1 className="text-xl font-bold text-text mb-6">My Wishlist ({items.length})</h1>
       {items.length === 0 ? (
         <EmptyState icon="❤️" title="Your wishlist is empty" description="Save products you love for later"
