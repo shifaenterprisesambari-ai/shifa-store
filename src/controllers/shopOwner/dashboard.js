@@ -23,19 +23,13 @@ export const getDashboardStats = async (req, reply) => {
       isAvailable: true 
     };
 
-    const orderQuery = {
-      $or: [
-        { shopOwner: userId },
-        ...(branchId ? [{ branch: branchId }] : [])
-      ]
-    };
+    const orderQuery = { shopOwner: userId };
 
     // Aggregate matching for aggregation pipeline (must manually cast to ObjectId)
-    const matchQuery = { status: "delivered" };
-    const orConditions = [];
-    if (userId) orConditions.push({ shopOwner: new mongoose.Types.ObjectId(userId) });
-    if (branchId) orConditions.push({ branch: new mongoose.Types.ObjectId(branchId) });
-    if (orConditions.length > 0) matchQuery.$or = orConditions;
+    const matchQuery = { 
+      status: "delivered", 
+      shopOwner: new mongoose.Types.ObjectId(userId)
+    };
 
     // Run queries in parallel
     const [

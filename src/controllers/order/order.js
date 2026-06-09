@@ -71,11 +71,39 @@ export const createOrder = async(req,reply)=>{
         });
         console.log("createOrder debug - mappedItems:", mappedItems);
 
+        // Resolve shopOwner of this order:
+        // 1. Try finding by matching first product's shop
+        let orderShopOwner = undefined;
+        if (mappedItems.length > 0) {
+            const productDoc = await Product.findById(mappedItems[0].item);
+            if (productDoc && productDoc.shop) {
+                orderShopOwner = productDoc.shop;
+            }
+        }
+
+        // 2. Try matching from the branch input if it corresponds to shopOwner ID or shop ID
+        if (!orderShopOwner && branch) {
+            const queryConditions = [];
+            if (mongoose.isValidObjectId(branch)) {
+                queryConditions.push({ _id: branch });
+                queryConditions.push({ shop: branch });
+            }
+            const shopOwnerDoc = await ShopOwner.findOne({ $or: queryConditions });
+            if (shopOwnerDoc) {
+                orderShopOwner = shopOwnerDoc._id;
+            }
+        }
+
+        // 3. Fallback to branchData.shopOwner
+        if (!orderShopOwner && branchData) {
+            orderShopOwner = branchData.shopOwner;
+        }
+
         const newOrder = new Order({
             customer:userId,
             items: mappedItems,
             branch: branchId,
-            shopOwner: branchData.shopOwner || undefined,
+            shopOwner: orderShopOwner || undefined,
             totalPrice,
             status: "pending",
             deliveryLocation:{
