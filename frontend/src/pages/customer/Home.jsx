@@ -104,7 +104,7 @@ const Home = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -80 }}
             transition={{ duration: 0.5 }}
-            className={`w-full py-24 sm:py-28 px-6 sm:px-16 bg-gradient-to-r ${HERO_BANNERS[activeBanner].gradient}`}
+            className={`w-full py-32 sm:py-40 px-6 sm:px-16 bg-gradient-to-r ${HERO_BANNERS[activeBanner].gradient}`}
           >
             <div className="flex items-center justify-between">
               <div className="flex flex-col items-start max-w-xs">
@@ -141,10 +141,11 @@ const Home = () => {
           {/* Dots */}
           <div className="absolute bottom-4 sm:bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 bg-black/15 backdrop-blur-md px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full border border-white/10 z-20 shadow-inner">
             {HERO_BANNERS.map((_, i) => (
-              <button
+              <span
                 key={i}
+                role="button"
                 onClick={() => setActiveBanner(i)}
-                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all duration-300 cursor-pointer ${i === activeBanner ? 'w-4 sm:w-6 bg-white' : 'bg-white/40 hover:bg-white/70'}`}
+                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all duration-300 cursor-pointer inline-block ${i === activeBanner ? 'w-4 sm:w-6 bg-white' : 'bg-white/40 hover:bg-white/70'}`}
               />
             ))}
           </div>
