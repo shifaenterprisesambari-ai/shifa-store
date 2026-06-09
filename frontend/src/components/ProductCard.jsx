@@ -36,11 +36,11 @@ const ProductCard = ({ product, index = 0 }) => {
       )}
 
       {/* Image */}
-      <div className="relative overflow-hidden bg-bg-secondary p-2 sm:p-3 shrink-0">
+      <div className="relative overflow-hidden bg-bg-secondary p-2 sm:p-3 shrink-0 h-28 sm:h-40 w-full flex items-center justify-center">
         <motion.img
           src={product.image}
           alt={product.name}
-          className="w-full h-24 sm:h-36 object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
+          className="max-w-full max-h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
           onError={(e) => { e.target.src = '/logo.png'; }}
         />
