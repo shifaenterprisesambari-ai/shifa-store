@@ -193,8 +193,8 @@ const Home = () => {
       </section>
 
       {/* Deals - Premium Improved Section */}
-      <section className="px-2 sm:px-4 mt-16 sm:mt-22">
-        <div className="bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent p-5 rounded-3xl border border-orange-100/50">
+      <section className="px-0 sm:px-4 mt-16 sm:mt-22">
+        <div className="bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent px-3 py-5 sm:p-5 rounded-none sm:rounded-3xl border-x-0 sm:border border-orange-100/50">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">
               <span className="text-xl animate-bounce">⚡</span>
@@ -405,12 +405,12 @@ const Home = () => {
       )}
 
       {/* Offers & Coupons Banner - High-fidelity design */}
-      <section className="px-2 sm:px-4 mt-36 sm:mt-52 mb-36 sm:mb-52">
+      <section className="px-0 sm:px-4 mt-36 sm:mt-52 mb-36 sm:mb-52">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="bg-gradient-to-br from-[#FF7A00] via-[#FF9A1F] to-[#FFC400] relative overflow-hidden rounded-[16px] sm:rounded-[22px] p-6 sm:p-12 text-white shadow-2xl shadow-orange-500/10 border border-white/10"
+          className="bg-gradient-to-br from-[#FF7A00] via-[#FF9A1F] to-[#FFC400] relative overflow-hidden rounded-none sm:rounded-[22px] px-4 py-8 sm:p-12 text-white shadow-2xl shadow-orange-500/10 border-x-0 sm:border border-white/10"
         >
           {/* Background shapes */}
           <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-white/10 blur-2xl"></div>
