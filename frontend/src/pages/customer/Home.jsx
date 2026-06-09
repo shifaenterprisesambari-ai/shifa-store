@@ -97,55 +97,119 @@ const Home = () => {
     <div className="w-full max-w-7xl mx-auto">
       {/* Hero Banner */}
       <section className="px-2.5 sm:px-4 pt-2 sm:pt-6">
-        <div className="relative overflow-hidden rounded-lg sm:rounded-lg shadow-md shadow-orange-500/5">
+        <div className="relative overflow-hidden rounded-lg sm:rounded-lg shadow-xl shadow-orange-500/5">
           <motion.div
             key={activeBanner}
             initial={{ opacity: 0, x: 80 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -80 }}
             transition={{ duration: 0.5 }}
-            className={`w-full h-[240px] sm:h-[320px] px-8 sm:px-16 bg-gradient-to-r ${HERO_BANNERS[activeBanner].gradient} flex items-center`}
+            className={`w-full h-[240px] sm:h-[320px] px-8 sm:px-16 bg-gradient-to-r ${HERO_BANNERS[activeBanner].gradient} flex items-center relative overflow-hidden`}
           >
-            <div className="flex items-center justify-between w-full">
+            {/* SVG Grid Overlay */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0c_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0c_1px,transparent_1px)] bg-[size:14px_24px] opacity-40 z-0" />
+            
+            {/* Glowing blur circles */}
+            <motion.div
+              animate={{
+                scale: [1, 1.15, 1],
+                x: [0, 10, 0],
+                y: [0, -10, 0],
+              }}
+              transition={{
+                duration: 8,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="absolute -right-8 -top-8 w-44 h-44 bg-white/20 rounded-full blur-3xl z-0"
+            />
+            <motion.div
+              animate={{
+                scale: [1, 1.1, 1],
+                x: [0, -15, 0],
+                y: [0, 10, 0],
+              }}
+              transition={{
+                duration: 9,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 1
+              }}
+              className="absolute -left-12 -bottom-12 w-48 h-48 bg-black/10 rounded-full blur-2xl z-0"
+            />
+
+            <div className="flex items-center justify-between w-full relative z-10">
               <div className="flex flex-col items-center text-center sm:items-start sm:text-left max-w-xs sm:max-w-md mx-auto sm:mx-0">
-                <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-white/80 text-sm font-black tracking-wider uppercase">
-                  🔥 Shifa Special Offer
-                </motion.span>
-                <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="text-3xl sm:text-5xl font-black text-white mt-3.5 tracking-tight leading-none">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-md text-[10px] sm:text-xs font-black text-white rounded-full border border-white/20 shadow-sm uppercase tracking-widest"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-300 animate-pulse" />
+                  ⚡ Shifa Special Offer
+                </motion.div>
+                
+                <motion.h1
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-3xl sm:text-5xl font-black text-white mt-4 tracking-tight leading-none drop-shadow-md"
+                >
                   {HERO_BANNERS[activeBanner].title}
                 </motion.h1>
-                <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="text-white/95 text-sm sm:text-lg mt-3 font-medium">
+                
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-white/90 text-xs sm:text-lg mt-2.5 font-medium tracking-wide drop-shadow-sm"
+                >
                   {HERO_BANNERS[activeBanner].subtitle}
                 </motion.p>
+                
                 {/* Wrapper div with inline style guarantees the button never stretches */}
-                <div style={{ width: 'max-content', marginTop: '16px' }}>
+                <div style={{ width: 'max-content', marginTop: '18px' }}>
                   <motion.button
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-                    whileHover={{ scale: 1.05 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    whileHover={{ scale: 1.05, boxShadow: '0 8px 20px -8px rgba(255,255,255,0.45)' }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => navigate('/search')}
-                    className="px-3.5 py-1.5 sm:px-5 sm:py-2 bg-white text-gray-900 font-black text-xs sm:text-sm rounded-md sm:rounded-lg shadow-md cursor-pointer inline-flex items-center gap-1.5"
+                    className="px-4 py-2 sm:px-6 sm:py-3 bg-white hover:bg-yellow-50 text-gray-950 font-black text-xs sm:text-sm rounded-md sm:rounded-lg shadow-md cursor-pointer inline-flex items-center gap-1.5 transition-all group"
                   >
-                    Shop Now <FiArrowRight className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                    Shop Now 
+                    <FiArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary group-hover:translate-x-0.5 transition-transform" />
                   </motion.button>
                 </div>
               </div>
+              
               <motion.span
-                initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, type: 'spring' }}
-                className="text-7xl sm:text-9xl hidden sm:block select-none filter drop-shadow-md"
+                initial={{ scale: 0 }}
+                animate={{
+                  scale: 1,
+                  y: [0, -10, 0],
+                  rotate: [0, 2, -2, 0]
+                }}
+                transition={{
+                  scale: { delay: 0.2, type: 'spring' },
+                  y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  rotate: { duration: 5, repeat: Infinity, ease: "easeInOut" }
+                }}
+                className="text-7xl sm:text-9xl hidden sm:block select-none filter drop-shadow-2xl cursor-pointer"
               >
                 {HERO_BANNERS[activeBanner].emoji}
               </motion.span>
             </div>
           </motion.div>
           {/* Dots */}
-          <div className="absolute bottom-4 sm:bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 bg-black/15 backdrop-blur-md px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full border border-white/10 z-20 shadow-inner">
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/15 z-20 shadow-lg">
             {HERO_BANNERS.map((_, i) => (
               <span
                 key={i}
                 role="button"
                 onClick={() => setActiveBanner(i)}
-                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all duration-300 cursor-pointer inline-block ${i === activeBanner ? 'w-4 sm:w-6 bg-white' : 'bg-white/40 hover:bg-white/70'}`}
+                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer inline-block ${i === activeBanner ? 'w-5 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/70'}`}
               />
             ))}
           </div>
