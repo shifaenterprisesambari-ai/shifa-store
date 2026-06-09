@@ -151,7 +151,7 @@ const Home = () => {
         </div>
       </section>
 
-      <div className="h-6 sm:h-8 w-full" />
+      <div className="h-10 sm:h-14 w-full" />
       {/* Quick Info Bar */}
       <section className="px-2 sm:px-4">
         <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide py-1">
@@ -167,7 +167,7 @@ const Home = () => {
         </div>
       </section>
 
-      <div className="h-6 sm:h-8 w-full" />
+      <div className="h-10 sm:h-14 w-full" />
       {/* Categories */}
       <section className="px-2 sm:px-4">
         <h2 className="text-lg font-bold text-text mb-4">Shop by Category</h2>
@@ -194,7 +194,7 @@ const Home = () => {
         )}
       </section>
 
-      <div className="h-8 sm:h-12 w-full" />
+      <div className="h-14 sm:h-20 w-full" />
       {/* Deals - Premium Improved Section */}
       <section className="px-0 sm:px-4">
         <div className="bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent px-3 py-5 sm:p-5 rounded-none sm:rounded-3xl border-x-0 sm:border border-orange-100/50">
@@ -320,7 +320,7 @@ const Home = () => {
 
           return (
             <div key={cat._id}>
-              <div className="h-8 sm:h-12 w-full" />
+              <div className="h-14 sm:h-20 w-full" />
               <section className="px-2 sm:px-4">
               <div className="flex items-center justify-between mb-5">
                 <div>
@@ -347,7 +347,7 @@ const Home = () => {
         })
       )}
 
-      <div className="h-8 sm:h-12 w-full" />
+      <div className="h-14 sm:h-20 w-full" />
       {/* Popular Stores */}
       <section className="px-2 sm:px-4">
         <div className="mb-5">
@@ -397,7 +397,7 @@ const Home = () => {
       {/* Trending Products */}
       {!loading && (
         <>
-          <div className="h-8 sm:h-12 w-full" />
+          <div className="h-14 sm:h-20 w-full" />
           <section className="px-2 sm:px-4">
           <div className="mb-5">
             <h2 className="text-lg font-black text-text tracking-tight">📈 Trending Products</h2>
@@ -414,7 +414,7 @@ const Home = () => {
       </>
       )}
 
-      <div className="h-12 sm:h-16 w-full" />
+      <div className="h-20 sm:h-28 w-full" />
       {/* Offers & Coupons Banner - High-fidelity design */}
       <section className="px-0 sm:px-4 mb-36 sm:mb-52">
         <motion.div
