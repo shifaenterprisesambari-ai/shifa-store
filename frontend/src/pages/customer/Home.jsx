@@ -97,7 +97,7 @@ const Home = () => {
     <div className="w-full max-w-7xl mx-auto">
       {/* Hero Banner */}
       <section className="px-2.5 sm:px-4 pt-2 sm:pt-6">
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-[16px] shadow-md shadow-orange-500/5">
+        <div className="relative overflow-hidden rounded-xl sm:rounded-xl shadow-md shadow-orange-500/5">
           <motion.div
             key={activeBanner}
             initial={{ opacity: 0, x: 80 }}
@@ -124,7 +124,7 @@ const Home = () => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => navigate('/search')}
-                    className="px-4 py-1.5 bg-white text-gray-900 font-black text-[10px] rounded-full shadow-md cursor-pointer inline-flex items-center gap-1"
+                    className="px-4 py-1.5 bg-white text-gray-900 font-black text-[10px] rounded-lg shadow-md cursor-pointer inline-flex items-center gap-1"
                   >
                     Shop Now <FiArrowRight className="w-2.5 h-2.5 text-primary" />
                   </motion.button>
