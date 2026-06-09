@@ -96,8 +96,8 @@ const Home = () => {
   return (
     <div className="max-w-7xl mx-auto">
       {/* Hero Banner */}
-      <section className="px-1 sm:px-4 pt-4 sm:pt-6">
-        <div className="relative overflow-hidden rounded-[12px] sm:rounded-[16px] shadow-md shadow-orange-500/5">
+      <section className="px-0 sm:px-4 pt-0 sm:pt-6">
+        <div className="relative overflow-hidden rounded-none sm:rounded-[16px] shadow-md shadow-orange-500/5">
           <motion.div
             key={activeBanner}
             initial={{ opacity: 0, x: 80 }}
@@ -107,7 +107,7 @@ const Home = () => {
             className={`w-full py-24 sm:py-28 px-6 sm:px-16 bg-gradient-to-r ${HERO_BANNERS[activeBanner].gradient}`}
           >
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex flex-col items-start max-w-xs">
                 <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-white/80 text-sm font-black tracking-wider uppercase">
                   🔥 Shifa Special Offer
                 </motion.span>
@@ -117,15 +117,18 @@ const Home = () => {
                 <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="text-white/95 text-sm sm:text-lg mt-3 font-medium">
                   {HERO_BANNERS[activeBanner].subtitle}
                 </motion.p>
-                <motion.button
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate('/search')}
-                  className="mt-5 sm:mt-8 px-5 py-2.5 sm:px-8 sm:py-4 bg-white text-gray-900 font-black text-[11px] sm:text-base rounded-lg hover:shadow-xl hover:shadow-black/10 transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
-                >
-                  Shop Now <FiArrowRight className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
-                </motion.button>
+                {/* Wrapper div with inline style guarantees the button never stretches */}
+                <div style={{ width: 'max-content', marginTop: '16px' }}>
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate('/search')}
+                    className="px-4 py-1.5 bg-white text-gray-900 font-black text-[10px] rounded-full shadow-md cursor-pointer inline-flex items-center gap-1"
+                  >
+                    Shop Now <FiArrowRight className="w-2.5 h-2.5 text-primary" />
+                  </motion.button>
+                </div>
               </div>
               <motion.span
                 initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, type: 'spring' }}
@@ -149,7 +152,7 @@ const Home = () => {
       </section>
 
       {/* Quick Info Bar */}
-      <section className="px-4 mt-8 sm:mt-12">
+      <section className="px-2 sm:px-4 mt-8 sm:mt-12">
         <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide py-1">
           {[
             { icon: <FiZap className="w-4 h-4 text-primary" />, text: '10 Min Delivery' },
@@ -164,7 +167,7 @@ const Home = () => {
       </section>
 
       {/* Categories */}
-      <section className="px-4 mt-8 sm:mt-12">
+      <section className="px-2 sm:px-4 mt-8 sm:mt-12">
         <h2 className="text-lg font-bold text-text mb-4">Shop by Category</h2>
         {loading ? <SkeletonCategoryRow /> : (
           <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
@@ -190,7 +193,7 @@ const Home = () => {
       </section>
 
       {/* Flash Sale - Premium Improved Section */}
-      <section className="px-4 mt-10 sm:mt-14">
+      <section className="px-2 sm:px-4 mt-10 sm:mt-14">
         <div className="bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent p-5 rounded-3xl border border-orange-100/50">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">
@@ -286,7 +289,7 @@ const Home = () => {
 
       {/* Products by Category */}
       {loading ? (
-        <section className="px-4 mt-10">
+        <section className="px-2 sm:px-4 mt-10">
           <SkeletonList count={8} />
         </section>
       ) : (
@@ -306,7 +309,7 @@ const Home = () => {
           };
 
           return (
-            <section key={cat._id} className="px-4 mt-12 sm:mt-16">
+            <section key={cat._id} className="px-2 sm:px-4 mt-12 sm:mt-16">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-lg font-black text-text tracking-tight flex items-center gap-2">
@@ -332,7 +335,7 @@ const Home = () => {
       )}
 
       {/* Popular Stores */}
-      <section className="px-4 mt-14 sm:mt-20">
+      <section className="px-2 sm:px-4 mt-14 sm:mt-20">
         <div className="mb-5">
           <h2 className="text-lg font-black text-text tracking-tight">🏪 Popular Stores Near You</h2>
           <p className="text-[10px] text-text-tertiary font-semibold mt-0.5">Top-rated local grocery hubs</p>
@@ -379,7 +382,7 @@ const Home = () => {
 
       {/* Demo Products if DB empty */}
       {!hasProducts && !loading && (
-        <section className="px-4 mt-14 sm:mt-20">
+        <section className="px-2 sm:px-4 mt-14 sm:mt-20">
           <div className="mb-5">
             <h2 className="text-lg font-black text-text tracking-tight">📈 Trending Products</h2>
             <p className="text-[10px] text-text-tertiary font-semibold mt-0.5">Top picks by local shoppers</p>
@@ -395,7 +398,7 @@ const Home = () => {
       )}
 
       {/* Offers & Coupons Banner - High-fidelity design */}
-      <section className="px-4 mt-36 sm:mt-52 mb-36 sm:mb-52">
+      <section className="px-2 sm:px-4 mt-36 sm:mt-52 mb-36 sm:mb-52">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

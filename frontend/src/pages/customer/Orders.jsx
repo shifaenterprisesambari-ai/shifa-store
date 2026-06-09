@@ -41,7 +41,7 @@ const Orders = () => {
   const filters = ['', 'pending', 'accepted', 'outForDelivery', 'delivered', 'cancelled'];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
+    <div className="max-w-4xl mx-auto px-2 sm:px-4 py-6">
       <h1 className="text-xl font-bold text-text mb-4">My Orders</h1>
 
       <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-6">

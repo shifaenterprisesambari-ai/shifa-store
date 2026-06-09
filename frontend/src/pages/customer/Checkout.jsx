@@ -48,7 +48,7 @@ const Checkout = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
+    <div className="max-w-3xl mx-auto px-2 sm:px-4 py-6">
       <div className="flex items-center gap-3 mb-6">
         <Link to="/cart" className="p-2 rounded-xl hover:bg-bg-secondary transition-colors"><FiArrowLeft className="w-5 h-5" /></Link>
         <h1 className="text-xl font-bold text-text">Checkout</h1>

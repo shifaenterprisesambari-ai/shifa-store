@@ -31,7 +31,7 @@ const Search = () => {
   const filtered = query.trim() ? allProducts.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()) || (p.categoryName || p.category || '').toLowerCase().includes(query.toLowerCase())) : allProducts;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="max-w-7xl mx-auto px-2 sm:px-4 py-6">
       <div className="relative max-w-xl mx-auto mb-8">
         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary w-5 h-5" />
         <input type="text" placeholder="Search for products, categories..." value={query}

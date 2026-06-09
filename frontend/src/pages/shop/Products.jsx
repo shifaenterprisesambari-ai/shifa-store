@@ -63,7 +63,7 @@ const ShopProducts = () => {
   if (loading) return <Spinner className="py-20" />;
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+    <div className="p-2 sm:p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-text">My Products ({products.length})</h1>
         <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setEditProduct(null); reset(); setShowModal(true); }}

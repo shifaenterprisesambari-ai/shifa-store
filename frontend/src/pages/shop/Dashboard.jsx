@@ -271,7 +271,7 @@ const ShopDashboard = () => {
   ];
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+    <div className="p-2 sm:p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="" className="w-10 h-10 rounded-xl shadow-sm" />
