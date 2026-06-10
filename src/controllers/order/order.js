@@ -11,10 +11,17 @@ import { syncParentOrderStatus } from "../../services/orderSyncService.js";
 export const createOrder = async(req,reply)=>{
     console.log("POST /order request received! Body:", req.body);
     try {
-        const {userId}=req.user;
-        const { items, branch, totalPrice} = req.body
-        
-        const customerData= await Customer.findById(userId)
+        const { userId, role } = req.user;
+        const { items, branch, totalPrice } = req.body;
+
+        // Only customers can place orders
+        if (role && role !== "Customer") {
+            return reply.status(403).send({
+                message: `Only customers can place orders. You are logged in as ${role}.`,
+            });
+        }
+
+        const customerData = await Customer.findById(userId);
 
         // Resolve branch: check if it's a direct branch ID, shopOwner ID, or matching a shopOwner's shop field
         let branchId = branch;
@@ -43,8 +50,12 @@ export const createOrder = async(req,reply)=>{
             }
         }
         
-        if(!customerData){
-           return reply.status(404).send({ message: "Customer not found" });
+        if (!customerData) {
+            return reply.status(404).send({
+                message: "Customer account not found. Please log out and log in again.",
+                hint: "Your session may be outdated. Try logging out and signing in again.",
+                userId,
+            });
         }
 
         if(!branchData){
