@@ -359,7 +359,7 @@ const Home = () => {
           <SkeletonList count={8} />
         </section>
       ) : (
-        categories.slice(0, 4).map((cat) => {
+        categories.map((cat) => {
           const products = productsByCategory[cat._id] || [];
           if (products.length === 0) return null;
           
