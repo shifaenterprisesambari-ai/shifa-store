@@ -1,6 +1,7 @@
 import Order from "../../models/order.js";
 import { assignDeliveryPartner } from "../../services/deliveryAssignment.js";
 import { createNotification } from "../../services/notificationService.js";
+import { syncParentOrderStatus } from "../../services/orderSyncService.js";
 
 /**
  * Get orders for the shop owner's branch, filtered by status.
@@ -141,6 +142,8 @@ export const rejectOrder = async (req, reply) => {
       orderId: order._id,
       io,
     });
+
+    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
 
     return reply.send({
       message: "Order rejected",

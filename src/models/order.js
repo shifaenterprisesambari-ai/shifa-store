@@ -76,6 +76,13 @@ const orderSchema= new mongoose.Schema({
       otpVerified: { type: Boolean, default: false },
       rejectionReason: { type: String },
       totalPrice: { type: Number, required: true },
+      isParent: { type: Boolean, default: false },
+      parentOrder: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Order",
+      },
+      platformEarnings: { type: Number, default: 0 },
+      vendorPayout: { type: Number, default: 0 },
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now },
 });
@@ -83,6 +90,8 @@ const orderSchema= new mongoose.Schema({
 orderSchema.index({ status: 1 });
 orderSchema.index({ shopOwner: 1, status: 1 });
 orderSchema.index({ deliveryPartner: 1, status: 1 });
+orderSchema.index({ parentOrder: 1 });
+orderSchema.index({ isParent: 1 });
 orderSchema.index({ customer: 1 });
 
 async function getNextSequenceValue(sequenceName) {

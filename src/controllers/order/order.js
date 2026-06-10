@@ -5,6 +5,7 @@ import Product from "../../models/products.js";
 import { Customer, DeliveryPartner, ShopOwner } from "../../models/user.js";
 import { createNotification } from "../../services/notificationService.js";
 import { verifyOtp } from "../../services/otpService.js";
+import { syncParentOrderStatus } from "../../services/orderSyncService.js";
 
 
 export const createOrder = async(req,reply)=>{
@@ -54,7 +55,7 @@ export const createOrder = async(req,reply)=>{
         const firstProduct = await Product.findOne();
         console.log("createOrder debug - firstProduct:", firstProduct);
 
-        const mappedItems = items.map((item) => {
+        const resolvedItemsWithProducts = await Promise.all(items.map(async (item) => {
             let itemId = item.id || item.item;
             let productObjectId = itemId;
 
@@ -63,101 +64,177 @@ export const createOrder = async(req,reply)=>{
                 console.log(`createOrder debug - mapped invalid itemId ${itemId} to ${productObjectId}`);
             }
 
+            const productDoc = await Product.findById(productObjectId);
             return {
-                id: productObjectId,
-                item: productObjectId,
-                count: item.count || 1
+                itemId: productObjectId,
+                count: item.count || 1,
+                product: productDoc
+            };
+        }));
+
+        const defaultShopOwner = branchData?.shopOwner || (await ShopOwner.findOne())?._id;
+
+        const itemsWithShopOwner = resolvedItemsWithProducts.map(resolved => {
+            const shopOwnerId = resolved.product?.shop || defaultShopOwner;
+            return {
+                ...resolved,
+                shopOwnerId: shopOwnerId ? shopOwnerId.toString() : "unknown"
             };
         });
-        console.log("createOrder debug - mappedItems:", mappedItems);
 
-        // Resolve shopOwner of this order:
-        // 1. Try finding by matching first product's shop
-        let orderShopOwner = undefined;
-        if (mappedItems.length > 0) {
-            const productDoc = await Product.findById(mappedItems[0].item);
-            if (productDoc && productDoc.shop) {
-                orderShopOwner = productDoc.shop;
+        // Group items by shopOwnerId
+        const groups = {};
+        for (const item of itemsWithShopOwner) {
+            const key = item.shopOwnerId;
+            if (!groups[key]) {
+                groups[key] = [];
+            }
+            groups[key].push(item);
+        }
+
+        // Calculate subtotal for each group and distribute totalPrice proportionally
+        let overallSubtotal = 0;
+        const groupSubtotals = {};
+        for (const key in groups) {
+            let subtotal = 0;
+            for (const item of groups[key]) {
+                const price = item.product?.price || 0;
+                subtotal += price * item.count;
+            }
+            groupSubtotals[key] = subtotal;
+            overallSubtotal += subtotal;
+        }
+
+        const groupTotalPrices = {};
+        const groupKeys = Object.keys(groups);
+        let distributedSum = 0;
+        for (let i = 0; i < groupKeys.length; i++) {
+            const key = groupKeys[i];
+            if (i === groupKeys.length - 1) {
+                groupTotalPrices[key] = Math.max(0, totalPrice - distributedSum);
+            } else {
+                const proportion = overallSubtotal > 0 ? (groupSubtotals[key] / overallSubtotal) : (1 / groupKeys.length);
+                const share = Math.round(proportion * totalPrice);
+                groupTotalPrices[key] = share;
+                distributedSum += share;
             }
         }
 
-        // 2. Try matching from the branch input if it corresponds to shopOwner ID or shop ID
-        if (!orderShopOwner && branch) {
-            const queryConditions = [];
-            if (mongoose.isValidObjectId(branch)) {
-                queryConditions.push({ _id: branch });
-                queryConditions.push({ shop: branch });
-            }
-            const shopOwnerDoc = await ShopOwner.findOne({ $or: queryConditions });
-            if (shopOwnerDoc) {
-                orderShopOwner = shopOwnerDoc._id;
-            }
-        }
+        const parentMappedItems = resolvedItemsWithProducts.map(resolved => ({
+            id: resolved.itemId,
+            item: resolved.itemId,
+            count: resolved.count
+        }));
 
-        // 3. Fallback to branchData.shopOwner
-        if (!orderShopOwner && branchData) {
-            orderShopOwner = branchData.shopOwner;
-        }
-
-        const newOrder = new Order({
-            customer:userId,
-            items: mappedItems,
+        const parentOrder = new Order({
+            customer: userId,
+            items: parentMappedItems,
             branch: branchId,
-            shopOwner: orderShopOwner || undefined,
-            totalPrice,
+            totalPrice: totalPrice,
             status: "pending",
-            deliveryLocation:{
-                latitude: customerData.liveLocation?.latitude || branchData.location?.latitude || 26.100511,
-                longitude: customerData.liveLocation?.longitude || branchData.location?.longitude || 90.41108,
+            isParent: true,
+            parentOrder: null,
+            deliveryLocation: {
+                latitude: customerData.liveLocation?.latitude || branchData?.location?.latitude || 26.100511,
+                longitude: customerData.liveLocation?.longitude || branchData?.location?.longitude || 90.41108,
                 address: customerData.address || "No address available",
             },
             pickupLocation: {
-                latitude: branchData.location?.latitude || 26.100511,
-                longitude: branchData.location?.longitude || 90.41108,
-                address: branchData.address || "No address available",
-              },
+                latitude: branchData?.location?.latitude || 26.100511,
+                longitude: branchData?.location?.longitude || 90.41108,
+                address: branchData?.address || "No address available",
+            },
         });
 
-        let savedOrder = await newOrder.save();
+        let savedParentOrder = await parentOrder.save();
 
-        savedOrder = await savedOrder.populate([
+        savedParentOrder = await savedParentOrder.populate([
             { path: "items.item" },
         ]);
 
-        // Emit Socket.io event for real-time tracking
+        const createdOrders = [];
         const io = req.server.io;
+
+        for (const key of groupKeys) {
+            const groupItems = groups[key];
+            const orderShopOwner = key !== "unknown" ? new mongoose.Types.ObjectId(key) : undefined;
+
+            const mappedGroupItems = groupItems.map(item => ({
+                id: item.itemId,
+                item: item.itemId,
+                count: item.count
+            }));
+
+            const groupTotalPrice = groupTotalPrices[key];
+            const platformEarnings = Math.round(groupTotalPrice * 0.10 * 100) / 100;
+            const vendorPayout = groupTotalPrice - platformEarnings;
+
+            const childOrder = new Order({
+                customer: userId,
+                items: mappedGroupItems,
+                branch: branchId,
+                shopOwner: orderShopOwner,
+                totalPrice: groupTotalPrice,
+                isParent: false,
+                parentOrder: savedParentOrder._id,
+                platformEarnings,
+                vendorPayout,
+                status: "pending",
+                deliveryLocation: {
+                    latitude: customerData.liveLocation?.latitude || branchData?.location?.latitude || 26.100511,
+                    longitude: customerData.liveLocation?.longitude || branchData?.location?.longitude || 90.41108,
+                    address: customerData.address || "No address available",
+                },
+                pickupLocation: {
+                    latitude: branchData?.location?.latitude || 26.100511,
+                    longitude: branchData?.location?.longitude || 90.41108,
+                    address: branchData?.address || "No address available",
+                },
+            });
+
+            let savedChildOrder = await childOrder.save();
+
+            savedChildOrder = await savedChildOrder.populate([
+                { path: "items.item" },
+            ]);
+
+            createdOrders.push(savedChildOrder);
+
+            if (orderShopOwner) {
+                const itemDetailsText = savedChildOrder.items
+                    .map(it => `${it.item?.name || "Product"} (x${it.count})`)
+                    .join(", ");
+
+                await createNotification({
+                    recipient: orderShopOwner,
+                    recipientModel: "ShopOwner",
+                    title: "New Order",
+                    message: `New order ${savedChildOrder.orderId} containing: ${itemDetailsText} has been placed.`,
+                    type: "order_placed",
+                    orderId: savedChildOrder._id,
+                    io,
+                });
+            }
+        }
+
         if (io) {
-            io.to(savedOrder._id.toString()).emit("order-created", {
-                orderId: savedOrder._id,
+            io.to(savedParentOrder._id.toString()).emit("order-created", {
+                orderId: savedParentOrder._id,
                 status: "pending",
             });
         }
 
-        // Notify shop owner about new order
-        if (branchData.shopOwner) {
-            await createNotification({
-                recipient: branchData.shopOwner,
-                recipientModel: "ShopOwner",
-                title: "New Order",
-                message: `New order ${savedOrder.orderId} has been placed.`,
-                type: "order_placed",
-                orderId: savedOrder._id,
-                io,
-            });
-        }
-
-        // Notify customer
         await createNotification({
             recipient: userId,
             recipientModel: "Customer",
             title: "Order Placed",
-            message: `Your order ${savedOrder.orderId} has been placed successfully.`,
+            message: `Your order ${savedParentOrder.orderId} has been placed successfully.`,
             type: "order_placed",
-            orderId: savedOrder._id,
+            orderId: savedParentOrder._id,
             io,
         });
 
-        return reply.status(201).send(savedOrder);
+        return reply.status(201).send(savedParentOrder);
  
     } catch (error) {
         console.log(error);
@@ -192,9 +269,11 @@ export const confirmOrder = async(req,reply)=>{
         };
 
         req.server.io.to(orderId).emit('orderConfirmed',order);
-        await order.save()
+        await order.save();
+
+        await syncParentOrderStatus({ parentOrderId: order.parentOrder, io: req.server.io });
     
-        return reply.send(order)
+        return reply.send(order);
 
     } catch (error) {
       console.log(error)
@@ -230,7 +309,12 @@ export const updateOrderStatus=async(req,reply)=>{
         order.deliveryPersonLocation = deliveryPersonLocation;
         await order.save();
 
-        req.server.io.to(orderId).emit("liveTrackingUpdates", order);
+        const io = req.server.io;
+        if (io) {
+            io.to(orderId).emit("liveTrackingUpdates", order);
+        }
+
+        await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
 
         return reply.send(order);
         
@@ -251,6 +335,10 @@ export const getOrders = async (req, reply) => {
       }
       if (customerId) {
         query.customer = customerId;
+        query.$or = [
+          { isParent: true },
+          { isParent: false, parentOrder: null }
+        ];
       }
       if (deliveryPartnerId) {
         query.deliveryPartner = deliveryPartnerId;

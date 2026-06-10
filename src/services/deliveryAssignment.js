@@ -2,6 +2,7 @@ import { DeliveryPartner } from "../models/user.js";
 import Order from "../models/order.js";
 import { generateOtp } from "./otpService.js";
 import { createNotification } from "./notificationService.js";
+import { syncParentOrderStatus } from "./orderSyncService.js";
 
 /**
  * Transition an accepted order to the available orders queue.
@@ -46,6 +47,26 @@ export const assignDeliveryPartner = async ({ order, io }) => {
       orderId: order._id,
       io,
     });
+
+    // Notify delivery partners in the branch
+    const queryConditions = { isAvailable: true };
+    if (order.branch) {
+      queryConditions.branch = order.branch;
+    }
+    const riders = await DeliveryPartner.find(queryConditions);
+    for (const rider of riders) {
+      await createNotification({
+        recipient: rider._id,
+        recipientModel: "DeliveryPartner",
+        title: "New Delivery Offer",
+        message: `New order ${order.orderId} is available for delivery at ${order.pickupLocation?.address || 'the branch'}.`,
+        type: "new_delivery_assignment",
+        orderId: order._id,
+        io,
+      });
+    }
+
+    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
 
     return order;
   } catch (error) {

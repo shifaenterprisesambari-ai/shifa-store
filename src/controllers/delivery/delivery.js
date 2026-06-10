@@ -2,6 +2,7 @@ import Order from "../../models/order.js";
 import { DeliveryPartner } from "../../models/user.js";
 import { verifyOtp } from "../../services/otpService.js";
 import { createNotification } from "../../services/notificationService.js";
+import { syncParentOrderStatus } from "../../services/orderSyncService.js";
 
 /**
  * Get all orders assigned to the authenticated delivery partner, or available orders in their branch.
@@ -118,11 +119,13 @@ export const acceptDelivery = async (req, reply) => {
       recipient: order.customer._id,
       recipientModel: "Customer",
       title: "Rider Accepted Your Order",
-      message: `Delivery partner ${rider.name || "rider"} has accepted your order and is heading to the store.`,
+      message: `Delivery partner ${rider.name || "rider"} has accepted your order and is heading to the store. Your delivery OTP is: ${order.deliveryOtp}.`,
       type: "out_for_delivery",
       orderId: order._id,
       io,
     });
+
+    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
 
     // Exclude deliveryOtp for security
     const orderObj = order.toObject();
@@ -193,6 +196,8 @@ export const cancelDelivery = async (req, reply) => {
       io,
     });
 
+    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
+
     // Exclude deliveryOtp for security
     const orderObj = order.toObject();
     delete orderObj.deliveryOtp;
@@ -255,6 +260,8 @@ export const pickupOrder = async (req, reply) => {
       io,
     });
 
+    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
+
     // Exclude deliveryOtp for security
     const orderObj = order.toObject();
     delete orderObj.deliveryOtp;
@@ -307,11 +314,13 @@ export const startDelivery = async (req, reply) => {
       recipient: order.customer,
       recipientModel: "Customer",
       title: "Out For Delivery",
-      message: `Your order ${order.orderId} is out for delivery!`,
+      message: `Your order ${order.orderId} is out for delivery! Share OTP ${order.deliveryOtp} with the delivery partner upon arrival.`,
       type: "out_for_delivery",
       orderId: order._id,
       io,
     });
+
+    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
 
     // Exclude deliveryOtp for security
     const orderObj = order.toObject();
@@ -411,6 +420,8 @@ export const completeDelivery = async (req, reply) => {
       io,
     });
 
+    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
+
     // Exclude deliveryOtp for security
     const orderObj = order.toObject();
     delete orderObj.deliveryOtp;
@@ -444,9 +455,9 @@ export const updateLocation = async (req, reply) => {
 
     // If orderId provided, update order's deliveryPersonLocation and broadcast
     if (orderId) {
-      await Order.findByIdAndUpdate(orderId, {
+      const updatedOrder = await Order.findByIdAndUpdate(orderId, {
         deliveryPersonLocation: { latitude, longitude },
-      });
+      }, { new: true });
 
       const io = req.server.io;
       if (io) {
@@ -454,6 +465,18 @@ export const updateLocation = async (req, reply) => {
           orderId,
           deliveryPersonLocation: { latitude, longitude },
         });
+      }
+
+      if (updatedOrder && updatedOrder.parentOrder) {
+        await Order.findByIdAndUpdate(updatedOrder.parentOrder, {
+          deliveryPersonLocation: { latitude, longitude },
+        });
+        if (io) {
+          io.to(updatedOrder.parentOrder.toString()).emit("location-updated", {
+            orderId: updatedOrder.parentOrder,
+            deliveryPersonLocation: { latitude, longitude },
+          });
+        }
       }
     }
 
