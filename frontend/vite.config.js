@@ -8,15 +8,15 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      strategies: 'injectManifest',
-      srcDir: 'src',
-      filename: 'sw.js',
+      // Use generateSW — VitePWA manages basic caching.
+      // Our custom push handling lives in /public/sw.js (registered manually).
+      strategies: 'generateSW',
       registerType: 'autoUpdate',
       includeAssets: ['logo.png'],
       manifest: {
         name: 'Shifa Store',
         short_name: 'Shifa Store',
-        description: 'Your favourite grocery store - fast delivery at your doorstep',
+        description: 'Your favourite grocery store — fast delivery at your doorstep',
         theme_color: '#FF7A00',
         background_color: '#FFFFFF',
         display: 'standalone',

@@ -25,8 +25,18 @@ export const subscribeUserToPush = async () => {
       return;
     }
 
-    // Get active service worker registration
-    const registration = await navigator.serviceWorker.ready;
+    // Register our own sw.js from /public (works in dev + prod)
+    let registration;
+    try {
+      registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      console.log('Service Worker registered ✅', registration.scope);
+    } catch (swErr) {
+      console.error('SW registration failed:', swErr);
+      return;
+    }
+
+    // Wait until the SW is active
+    await navigator.serviceWorker.ready;
 
     // Check if subscription already exists
     let subscription = await registration.pushManager.getSubscription();
@@ -34,19 +44,22 @@ export const subscribeUserToPush = async () => {
     if (!subscription) {
       // Fetch VAPID public key from backend
       const { data } = await api.get('/notifications/vapid-public-key');
+      if (!data.publicKey) {
+        console.error('No VAPID key returned from server');
+        return;
+      }
       const applicationServerKey = urlBase64ToUint8Array(data.publicKey);
 
-      // Subscribe user
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: applicationServerKey,
+        applicationServerKey,
       });
     }
 
-    // Send subscription object to backend to store
-    await api.post('/notifications/subscribe', subscription);
-    console.log('Successfully registered for Web Push Notifications ✅');
+    // Send subscription to backend
+    await api.post('/notifications/subscribe', subscription.toJSON());
+    console.log('✅ Web Push Notifications activated');
   } catch (error) {
-    console.error('Failed to subscribe user to web push:', error);
+    console.error('Failed to subscribe to web push:', error);
   }
 };
