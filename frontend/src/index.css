@@ -393,8 +393,8 @@ img {
     font-size: 1.5rem !important;
   }
 
-  button {
-    width: 100%;
+  button.w-full,
+  button[type="submit"] {
     min-height: 48px;
   }
 
@@ -436,7 +436,8 @@ img {
     padding: 12px;
   }
 
-  button {
+  button.w-full,
+  button[type="submit"] {
     padding: 12px;
   }
 }
@@ -451,4 +452,10 @@ img {
 .mx-auto {
   margin-left: auto !important;
   margin-right: auto !important;
+}
+
+.login-input {
+  padding-left: 3.25rem !important;
+  padding-right: 3rem !important;
+  height: 52px !important;
 }

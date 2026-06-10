@@ -265,17 +265,9 @@ const Home = () => {
         <div className="bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent px-3.5 py-5 sm:p-5 rounded-2xl sm:rounded-3xl border border-orange-100/50">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">
-              <span className="text-xl animate-bounce">⚡</span>
-              <div>
-                <h2 className="text-lg font-black text-text tracking-tight flex items-center gap-2">
-                  Deals <span className="text-error font-black animate-pulse">LIVE</span>
-                </h2>
-                <p className="text-[10px] text-text-secondary font-medium">Top offers, ending soon!</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-white border border-orange-100 rounded-full shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-error animate-ping"></span>
-              <span className="text-[10px] text-error font-extrabold uppercase tracking-wider">04h : 18m : 42s</span>
+              <h2 className="text-lg font-black text-text tracking-tight">
+                Deals
+              </h2>
             </div>
           </div>
 
@@ -343,8 +335,7 @@ const Home = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-2.5 border-t border-dashed border-gray-100 flex items-center justify-between">
-                    <span className="text-[9px] text-error font-extrabold flex items-center gap-0.5 uppercase">⏰ {item.timeLeft || '15 mins'}</span>
+                  <div className="mt-4 pt-2.5 border-t border-dashed border-gray-100 flex items-center justify-end">
                     <button
                       onClick={() => {
                         dispatch(addToCart(cartProduct));
@@ -486,7 +477,7 @@ const Home = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="bg-gradient-to-br from-[#FF7A00] via-[#FF9A1F] to-[#FFC400] relative overflow-hidden rounded-2xl sm:rounded-[22px] px-4 py-8 sm:p-12 text-white shadow-2xl shadow-orange-500/10 border border-white/10"
+          className="bg-gradient-to-br from-[#FF7A00] via-[#FF9A1F] to-[#FFC400] relative overflow-hidden rounded-2xl sm:rounded-[22px] px-6 py-16 sm:px-16 sm:py-24 text-white shadow-2xl shadow-orange-500/10 border border-white/10"
         >
           {/* Background shapes */}
           <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-white/10 blur-2xl"></div>
@@ -504,15 +495,15 @@ const Home = () => {
                 Save big on your very first order at Shifa Store. Fresh groceries and household essentials delivered in minutes.
               </p>
               
-              <div className="relative inline-flex items-center gap-2 sm:gap-3 mt-4 sm:mt-6 px-4 sm:px-5 py-2 sm:py-2.5 bg-black/10 backdrop-blur-md rounded-xl border border-white/10 shadow-inner">
+              <div className="relative inline-flex items-center gap-2 sm:gap-3 mt-4 sm:mt-6 pl-5 pr-7 sm:pl-6 sm:pr-8 py-2 sm:py-2.5 bg-black/10 backdrop-blur-md rounded-xl border border-white/10 shadow-inner">
                 {/* Perforated ticket punch notches */}
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-white"></div>
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-white"></div>
                 
-                <span className="text-[10px] sm:text-xs font-black text-white/95 uppercase tracking-wide pl-1.5">
+                <span className="relative z-10 text-[10px] sm:text-xs font-black text-white/95 uppercase tracking-wide pl-1.5">
                   🏷️ Use Code:
                 </span>
-                <span className="text-[11px] sm:text-sm font-black bg-white text-primary px-3 sm:px-3.5 py-1 rounded-lg shadow-md tracking-widest uppercase">
+                <span className="relative z-10 text-[11px] sm:text-sm font-black bg-white text-primary px-3 sm:px-3.5 py-1 rounded-lg shadow-md tracking-widest uppercase">
                   SHIFA100
                 </span>
               </div>
