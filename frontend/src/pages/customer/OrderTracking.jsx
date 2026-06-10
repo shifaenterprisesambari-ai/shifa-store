@@ -26,14 +26,15 @@ const OrderTracking = () => {
     socketService.connect();
     socketService.joinRoom(orderId);
 
+    // On ANY order event, re-fetch the full order so we always have complete data
+    const handleUpdate = () => {
+      orderService.getOrderById(orderId)
+        .then(({ data }) => setOrder(data))
+        .catch(console.error);
+    };
+
     const events = ['order-accepted', 'rider-assigned', 'order-accepted-by-rider', 'picked-up', 'out-for-delivery', 'delivered', 'liveTrackingUpdates', 'location-updated'];
-    events.forEach((ev) => {
-      socketService.onOrderUpdate(ev, (data) => {
-        if (data.orderId === orderId || data._id === orderId) {
-          setOrder((prev) => ({ ...prev, ...data, status: data.status || prev?.status }));
-        }
-      });
-    });
+    events.forEach((ev) => socketService.onOrderUpdate(ev, handleUpdate));
 
     return () => {
       events.forEach((ev) => socketService.offEvent(ev));

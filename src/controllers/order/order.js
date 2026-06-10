@@ -353,7 +353,7 @@ export const getOrders = async (req, reply) => {
       }
       if (deliveryPartnerId) {
         query.deliveryPartner = deliveryPartnerId;
-        query.branch = branchId;
+        if (branchId) query.branch = branchId;
       }
   
       const orders = await Order.find(query).populate(

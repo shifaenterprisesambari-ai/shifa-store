@@ -35,10 +35,10 @@ export const ORDER_STATUS_LABELS = {
 
 export const ORDER_TRACKING_STEPS = [
   { key: 'pending', label: 'Order Placed', icon: '📦' },
-  { key: 'accepted', label: 'Accepted', icon: '✅' },
-  { key: 'assigned', label: 'Rider Assigned', icon: '🚴' },
-  { key: 'acceptedByRider', label: 'Rider On Way', icon: '🏃' },
-  { key: 'pickedUp', label: 'Picked Up', icon: '🛍️' },
+  { key: 'accepted', label: 'Shop Accepted', icon: '✅' },
+  { key: 'available', label: 'Finding Rider', icon: '🔍' },
+  { key: 'acceptedByRider', label: 'Rider On Way to Shop', icon: '🏃' },
+  { key: 'pickedUp', label: 'Picked Up from Shop', icon: '🛍️' },
   { key: 'outForDelivery', label: 'Out for Delivery', icon: '🛵' },
   { key: 'delivered', label: 'Delivered', icon: '🎉' },
 ];
