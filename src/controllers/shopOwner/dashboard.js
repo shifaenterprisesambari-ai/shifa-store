@@ -14,20 +14,20 @@ export const getDashboardStats = async (req, reply) => {
     const shopOwner = await ShopOwner.findById(userId);
     const branchId = shopOwner?.branch;
 
-    // Collect every possible ID that might be stored as the product's `shop` field
+    // Collect every possible ID that might be stored as the product's `shop` field or order's `shopOwner` field
     const possibleIds = [new mongoose.Types.ObjectId(userId)];
-    if (shopOwner?.shop) possibleIds.push(shopOwner.shop);
-    if (shopOwner?.branch) possibleIds.push(shopOwner.branch);
+    if (shopOwner?.shop) possibleIds.push(new mongoose.Types.ObjectId(shopOwner.shop));
+    if (shopOwner?.branch) possibleIds.push(new mongoose.Types.ObjectId(shopOwner.branch));
 
     const productQuery = { shop: { $in: possibleIds } };
     const activeProductQuery = { shop: { $in: possibleIds }, isEnabled: true, isAvailable: true };
 
-    const orderQuery = { shopOwner: userId };
+    const orderQuery = { shopOwner: { $in: possibleIds } };
 
     // Aggregate matching for aggregation pipeline (must manually cast to ObjectId)
     const matchQuery = { 
       status: "delivered", 
-      shopOwner: new mongoose.Types.ObjectId(userId)
+      shopOwner: { $in: possibleIds }
     };
 
     // Run queries in parallel

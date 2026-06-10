@@ -1,4 +1,6 @@
+import mongoose from "mongoose";
 import Order from "../../models/order.js";
+import { ShopOwner } from "../../models/user.js";
 import { assignDeliveryPartner } from "../../services/deliveryAssignment.js";
 import { createNotification } from "../../services/notificationService.js";
 import { syncParentOrderStatus } from "../../services/orderSyncService.js";
@@ -11,9 +13,14 @@ export const getShopOrders = async (req, reply) => {
     const { userId } = req.user;
     const { status } = req.query;
 
+    const shopOwner = await ShopOwner.findById(userId);
+    const possibleIds = [new mongoose.Types.ObjectId(userId)];
+    if (shopOwner?.shop) possibleIds.push(new mongoose.Types.ObjectId(shopOwner.shop));
+    if (shopOwner?.branch) possibleIds.push(new mongoose.Types.ObjectId(shopOwner.branch));
+
     // Query only this specific shop owner's orders — do NOT include the shared
     // branch condition, which would leak other owners' orders to each other.
-    const query = { shopOwner: userId };
+    const query = { shopOwner: { $in: possibleIds } };
     if (status) query.status = status;
 
     const orders = await Order.find(query)
@@ -39,9 +46,14 @@ export const acceptOrder = async (req, reply) => {
     const { userId } = req.user;
     const { orderId } = req.params;
 
+    const shopOwner = await ShopOwner.findById(userId);
+    const possibleIds = [new mongoose.Types.ObjectId(userId)];
+    if (shopOwner?.shop) possibleIds.push(new mongoose.Types.ObjectId(shopOwner.shop));
+    if (shopOwner?.branch) possibleIds.push(new mongoose.Types.ObjectId(shopOwner.branch));
+
     const order = await Order.findOne({ 
       _id: orderId, 
-      shopOwner: userId,
+      shopOwner: { $in: possibleIds },
     });
 
     if (!order) {
@@ -110,9 +122,14 @@ export const rejectOrder = async (req, reply) => {
     const { orderId } = req.params;
     const { reason } = req.body;
 
+    const shopOwner = await ShopOwner.findById(userId);
+    const possibleIds = [new mongoose.Types.ObjectId(userId)];
+    if (shopOwner?.shop) possibleIds.push(new mongoose.Types.ObjectId(shopOwner.shop));
+    if (shopOwner?.branch) possibleIds.push(new mongoose.Types.ObjectId(shopOwner.branch));
+
     const order = await Order.findOne({ 
       _id: orderId, 
-      shopOwner: userId,
+      shopOwner: { $in: possibleIds },
     });
 
     if (!order) {
