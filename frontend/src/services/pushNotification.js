@@ -1,0 +1,52 @@
+import api from './api';
+
+const urlBase64ToUint8Array = (base64String) => {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+};
+
+export const subscribeUserToPush = async () => {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.warn('Push messaging is not supported in this browser');
+      return;
+    }
+
+    // Request notification permission
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.log('Notification permission denied');
+      return;
+    }
+
+    // Get active service worker registration
+    const registration = await navigator.serviceWorker.ready;
+
+    // Check if subscription already exists
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      // Fetch VAPID public key from backend
+      const { data } = await api.get('/notifications/vapid-public-key');
+      const applicationServerKey = urlBase64ToUint8Array(data.publicKey);
+
+      // Subscribe user
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey,
+      });
+    }
+
+    // Send subscription object to backend to store
+    await api.post('/notifications/subscribe', subscription);
+    console.log('Successfully registered for Web Push Notifications ✅');
+  } catch (error) {
+    console.error('Failed to subscribe user to web push:', error);
+  }
+};

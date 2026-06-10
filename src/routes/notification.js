@@ -3,6 +3,8 @@ import {
   getNotifications,
   markAsRead,
   markAllAsRead,
+  subscribeUser,
+  getVapidPublicKey,
 } from "../controllers/notification/notification.js";
 
 export const notificationRoutes = async (fastify, options) => {
@@ -17,4 +19,6 @@ export const notificationRoutes = async (fastify, options) => {
   fastify.get("/notifications", getNotifications);
   fastify.patch("/notifications/:id/read", markAsRead);
   fastify.patch("/notifications/read-all", markAllAsRead);
+  fastify.post("/notifications/subscribe", subscribeUser);
+  fastify.get("/notifications/vapid-public-key", getVapidPublicKey);
 };

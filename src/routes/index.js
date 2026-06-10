@@ -4,6 +4,7 @@ import { categoryRoutes, productRoutes } from "./products.js";
 import { shopOwnerRoutes } from "./shopOwner.js";
 import { deliveryRoutes } from "./delivery.js";
 import { notificationRoutes } from "./notification.js";
+import { adminRoutes } from "./admin.js";
 
 const prefix = "/api";
 
@@ -15,4 +16,5 @@ export const registerRoutes = async (fastify) => {
   fastify.register(shopOwnerRoutes, { prefix: prefix });
   fastify.register(deliveryRoutes, { prefix: prefix });
   fastify.register(notificationRoutes, { prefix: prefix });
+  fastify.register(adminRoutes, { prefix: prefix });
 };

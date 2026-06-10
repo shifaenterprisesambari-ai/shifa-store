@@ -75,7 +75,7 @@ const AppRoutes = () => (
 
       {/* Admin Routes */}
       <Route element={<CustomerLayout />}>
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/dashboard" element={<ProtectedRoute roles={['Admin']}><AdminDashboard /></ProtectedRoute>} />
       </Route>
 
       {/* Catch All */}

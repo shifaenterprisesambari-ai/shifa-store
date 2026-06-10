@@ -10,6 +10,7 @@ import socketService from './services/socketService';
 import { fetchUser } from './store/authSlice';
 import { setNotifications, addNotification } from './store/notificationSlice';
 import { notificationService } from './services/notificationService';
+import { subscribeUserToPush } from './services/pushNotification';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 2, refetchOnWindowFocus: false, staleTime: 30000 } },
@@ -30,6 +31,9 @@ const AppInit = ({ children }) => {
       // Connect socket and join user room
       socketService.connect();
       socketService.joinUserRoom(user._id);
+
+      // Subscribe to Web Push Notifications
+      subscribeUserToPush();
 
       // Listen for real-time notifications
       socketService.onNotification((notification) => {
