@@ -6,10 +6,10 @@ const fromNumber = process.env.TWILIO_WHATSAPP_FROM; // e.g. whatsapp:+141552388
 
 let client = null;
 
-if (accountSid && authToken) {
+if (accountSid && accountSid.startsWith("AC") && authToken) {
   client = twilio(accountSid, authToken);
 } else {
-  console.warn("⚠️  Twilio credentials not set — WhatsApp notifications disabled.");
+  console.warn("⚠️  Twilio credentials not set or invalid — WhatsApp notifications disabled.");
 }
 
 /**
