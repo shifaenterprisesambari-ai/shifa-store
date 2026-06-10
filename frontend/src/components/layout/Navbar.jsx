@@ -20,6 +20,16 @@ const Navbar = () => {
   const cartCount = useSelector(selectCartCount);
   const { unreadCount } = useSelector((s) => s.notifications);
 
+  const getHomeLink = () => {
+    if (!isAuthenticated || !user) return "/";
+    if (user.role === 'ShopOwner') return "/shop/dashboard";
+    if (user.role === 'DeliveryPartner') return "/delivery/dashboard";
+    if (user.role === 'Admin') return "/admin/dashboard";
+    return "/";
+  };
+
+  const isCustomerOrGuest = !isAuthenticated || user?.role === 'Customer';
+
   useEffect(() => {
     const handleClick = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false);
@@ -48,32 +58,36 @@ const Navbar = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-16">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2.5 shrink-0">
+            <Link to={getHomeLink()} className="flex items-center gap-2.5 shrink-0">
               <img src="/logo.png" alt="Shifa Store" className="w-9 h-9 rounded-full" />
               <span className="text-xl font-bold text-gradient hidden sm:block">Shifa Store</span>
             </Link>
 
             {/* Search Bar - Desktop */}
-            <div className="hidden md:flex flex-1 max-w-xl mx-8">
-              <form onSubmit={handleSearch} className="w-full relative">
-                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search for groceries, essentials..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ paddingLeft: '2.75rem' }}
-                  className="w-full pr-4 py-2.5 bg-bg-secondary rounded-xl text-sm border border-transparent focus:border-primary/30 focus:bg-white focus:outline-none transition-all"
-                />
-              </form>
-            </div>
+            {isCustomerOrGuest && (
+              <div className="hidden md:flex flex-1 max-w-xl mx-8">
+                <form onSubmit={handleSearch} className="w-full relative">
+                  <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search for groceries, essentials..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{ paddingLeft: '2.75rem' }}
+                    className="w-full pr-4 py-2.5 bg-bg-secondary rounded-xl text-sm border border-transparent focus:border-primary/30 focus:bg-white focus:outline-none transition-all"
+                  />
+                </form>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex items-center gap-2.5 sm:gap-4">
               {/* Search mobile toggle */}
-              <button onClick={() => setSearchOpen(!searchOpen)} className="md:hidden p-2.5 rounded-xl hover:bg-bg-secondary transition-colors">
-                <FiSearch className="w-5 h-5 text-text-secondary" />
-              </button>
+              {isCustomerOrGuest && (
+                <button onClick={() => setSearchOpen(!searchOpen)} className="md:hidden p-2.5 rounded-xl hover:bg-bg-secondary transition-colors">
+                  <FiSearch className="w-5 h-5 text-text-secondary" />
+                </button>
+              )}
 
               {/* Notifications */}
               {isAuthenticated && (
@@ -88,14 +102,16 @@ const Navbar = () => {
               )}
 
               {/* Cart */}
-              <Link to="/cart" className="relative p-2.5 rounded-xl hover:bg-bg-secondary transition-colors">
-                <FiShoppingCart className="w-5 h-5 text-text-secondary" />
-                {cartCount > 0 && (
-                  <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-0.5 -right-0.5 w-5 h-5 gradient-primary text-white text-[10px] font-bold flex items-center justify-center rounded-full">
-                    {cartCount > 9 ? '9+' : cartCount}
-                  </motion.span>
-                )}
-              </Link>
+              {isCustomerOrGuest && (
+                <Link to="/cart" className="relative p-2.5 rounded-xl hover:bg-bg-secondary transition-colors">
+                  <FiShoppingCart className="w-5 h-5 text-text-secondary" />
+                  {cartCount > 0 && (
+                    <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-0.5 -right-0.5 w-5 h-5 gradient-primary text-white text-[10px] font-bold flex items-center justify-center rounded-full">
+                      {cartCount > 9 ? '9+' : cartCount}
+                    </motion.span>
+                  )}
+                </Link>
+              )}
 
               {/* Premium Visual Divider */}
               <div className="h-5 w-px bg-border/60 mx-1 hidden sm:block"></div>

@@ -15,10 +15,14 @@ const tabs = [
 const BottomNav = () => {
   const location = useLocation();
   const cartCount = useSelector(selectCartCount);
+  const { user, isAuthenticated } = useSelector((s) => s.auth);
 
   // Hide on certain routes
   const hideOn = ['/login', '/signup', '/order-tracking'];
   if (hideOn.some((p) => location.pathname.startsWith(p))) return null;
+
+  // Hide for non-customer roles (ShopOwner, DeliveryPartner, Admin)
+  if (isAuthenticated && user && user.role !== 'Customer') return null;
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 safe-bottom">

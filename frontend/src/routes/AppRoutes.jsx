@@ -39,6 +39,22 @@ const ProtectedRoute = ({ children, roles }) => {
   return children;
 };
 
+const CustomerRoute = ({ children }) => {
+  const { isAuthenticated, user, loading } = useSelector((s) => s.auth);
+
+  if (loading || (isAuthenticated && !user)) {
+    return <LoadFallback />;
+  }
+
+  if (isAuthenticated && user) {
+    if (user.role === 'ShopOwner') return <Navigate to="/shop/dashboard" replace />;
+    if (user.role === 'DeliveryPartner') return <Navigate to="/delivery/dashboard" replace />;
+    if (user.role === 'Admin') return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  return children;
+};
+
 const LoadFallback = () => <Spinner className="py-20" />;
 
 const AppRoutes = () => (
@@ -50,16 +66,16 @@ const AppRoutes = () => (
 
       {/* Customer Routes */}
       <Route element={<CustomerLayout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/category/:categoryId" element={<Category />} />
-        <Route path="/search" element={<Search />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/wishlist" element={<Wishlist />} />
-        <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
-        <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-        <Route path="/order-tracking/:orderId" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/addresses" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/" element={<CustomerRoute><Home /></CustomerRoute>} />
+        <Route path="/category/:categoryId" element={<CustomerRoute><Category /></CustomerRoute>} />
+        <Route path="/search" element={<CustomerRoute><Search /></CustomerRoute>} />
+        <Route path="/cart" element={<CustomerRoute><Cart /></CustomerRoute>} />
+        <Route path="/wishlist" element={<CustomerRoute><Wishlist /></CustomerRoute>} />
+        <Route path="/checkout" element={<ProtectedRoute><CustomerRoute><Checkout /></CustomerRoute></ProtectedRoute>} />
+        <Route path="/orders" element={<ProtectedRoute><CustomerRoute><Orders /></CustomerRoute></ProtectedRoute>} />
+        <Route path="/order-tracking/:orderId" element={<ProtectedRoute><CustomerRoute><OrderTracking /></CustomerRoute></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><CustomerRoute><Profile /></CustomerRoute></ProtectedRoute>} />
+        <Route path="/addresses" element={<ProtectedRoute><CustomerRoute><Profile /></CustomerRoute></ProtectedRoute>} />
       </Route>
 
       {/* Shop Owner Routes */}
