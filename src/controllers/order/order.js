@@ -356,9 +356,15 @@ export const getOrders = async (req, reply) => {
         if (branchId) query.branch = branchId;
       }
   
-      const orders = await Order.find(query).populate(
-        "customer branch items.item deliveryPartner"
-      );
+      const orders = await Order.find(query)
+        .populate("customer branch deliveryPartner")
+        .populate({
+          path: "items.item",
+          populate: {
+            path: "shop",
+            select: "shopName shopAddress email phone"
+          }
+        });
   
       return reply.send(orders);
     } catch (error) {
@@ -372,9 +378,15 @@ export const getOrderById = async (req, reply) => {
     try {
       const { orderId } = req.params;
   
-      const order = await Order.findById(orderId).populate(
-        "customer branch items.item deliveryPartner"
-      );
+      const order = await Order.findById(orderId)
+        .populate("customer branch deliveryPartner")
+        .populate({
+          path: "items.item",
+          populate: {
+            path: "shop",
+            select: "shopName shopAddress email phone"
+          }
+        });
   
       if (!order) {
         return reply.status(404).send({ message: "Order not found" });

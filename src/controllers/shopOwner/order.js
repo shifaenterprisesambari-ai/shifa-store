@@ -92,12 +92,11 @@ export const acceptOrder = async (req, reply) => {
       io,
     });
 
-    // Auto-assign delivery partner
-    const updatedOrder = await assignDeliveryPartner({ order, io });
+    // Notify parent order to consolidate statuses and trigger rider assignment when ready
+    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
 
-    const populatedOrder = await Order.findById(updatedOrder._id)
+    const populatedOrder = await Order.findById(order._id)
       .populate("customer", "name phone email")
-      .populate("deliveryPartner", "name phone")
       .populate("items.item")
       .populate("branch", "name address");
 

@@ -2,7 +2,7 @@ import Order from "../../models/order.js";
 import { DeliveryPartner } from "../../models/user.js";
 import { verifyOtp } from "../../services/otpService.js";
 import { createNotification } from "../../services/notificationService.js";
-import { syncParentOrderStatus } from "../../services/orderSyncService.js";
+import { syncChildOrders } from "../../services/orderSyncService.js";
 
 /**
  * Get all orders assigned to the authenticated delivery partner, or available orders in their branch.
@@ -19,10 +19,14 @@ export const getAssignedOrders = async (req, reply) => {
     if (status === "available") {
       query = {
         status: "available",
+        isParent: true,
         ...(branchId ? { branch: branchId } : {})
       };
     } else {
-      query = { deliveryPartner: userId };
+      query = { 
+        deliveryPartner: userId,
+        isParent: true 
+      };
       if (status) {
         query.status = status;
       }
@@ -32,7 +36,13 @@ export const getAssignedOrders = async (req, reply) => {
     const orders = await Order.find(query, { deliveryOtp: 0 })
       .populate("customer", "name phone email address")
       .populate("branch", "name address location")
-      .populate("items.item")
+      .populate({
+        path: "items.item",
+        populate: {
+          path: "shop",
+          select: "shopName shopAddress email phone"
+        }
+      })
       .sort({ createdAt: -1 });
 
     return reply.send(orders);
@@ -75,7 +85,8 @@ export const acceptDelivery = async (req, reply) => {
     // Find the available order
     const order = await Order.findOne({
       _id: orderId,
-      status: "available"
+      status: "available",
+      isParent: true
     }).populate("customer").populate("branch");
 
     if (!order) {
@@ -125,7 +136,7 @@ export const acceptDelivery = async (req, reply) => {
       io,
     });
 
-    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
+    await syncChildOrders({ parentOrder: order, io });
 
     // Exclude deliveryOtp for security
     const orderObj = order.toObject();
@@ -154,6 +165,7 @@ export const cancelDelivery = async (req, reply) => {
     const order = await Order.findOne({
       _id: orderId,
       deliveryPartner: userId,
+      isParent: true
     }).populate("customer");
 
     if (!order) {
@@ -196,7 +208,7 @@ export const cancelDelivery = async (req, reply) => {
       io,
     });
 
-    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
+    await syncChildOrders({ parentOrder: order, io });
 
     // Exclude deliveryOtp for security
     const orderObj = order.toObject();
@@ -225,6 +237,7 @@ export const pickupOrder = async (req, reply) => {
     const order = await Order.findOne({
       _id: orderId,
       deliveryPartner: userId,
+      isParent: true
     });
 
     if (!order) {
@@ -260,7 +273,7 @@ export const pickupOrder = async (req, reply) => {
       io,
     });
 
-    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
+    await syncChildOrders({ parentOrder: order, io });
 
     // Exclude deliveryOtp for security
     const orderObj = order.toObject();
@@ -285,6 +298,7 @@ export const startDelivery = async (req, reply) => {
     const order = await Order.findOne({
       _id: orderId,
       deliveryPartner: userId,
+      isParent: true
     });
 
     if (!order) {
@@ -320,7 +334,7 @@ export const startDelivery = async (req, reply) => {
       io,
     });
 
-    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
+    await syncChildOrders({ parentOrder: order, io });
 
     // Exclude deliveryOtp for security
     const orderObj = order.toObject();
@@ -350,6 +364,7 @@ export const completeDelivery = async (req, reply) => {
     const order = await Order.findOne({
       _id: orderId,
       deliveryPartner: userId,
+      isParent: true
     });
 
     if (!order) {
@@ -396,19 +411,6 @@ export const completeDelivery = async (req, reply) => {
       io,
     });
 
-    // Notify shop owner
-    if (order.shopOwner) {
-      await createNotification({
-        recipient: order.shopOwner,
-        recipientModel: "ShopOwner",
-        title: "Order Delivered",
-        message: `Order ${order.orderId} has been delivered to the customer.`,
-        type: "delivery_completed",
-        orderId: order._id,
-        io,
-      });
-    }
-
     // Notify delivery partner
     await createNotification({
       recipient: userId,
@@ -420,7 +422,7 @@ export const completeDelivery = async (req, reply) => {
       io,
     });
 
-    await syncParentOrderStatus({ parentOrderId: order.parentOrder, io });
+    await syncChildOrders({ parentOrder: order, io });
 
     // Exclude deliveryOtp for security
     const orderObj = order.toObject();

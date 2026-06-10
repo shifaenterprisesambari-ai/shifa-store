@@ -1,7 +1,8 @@
 import Order from "../models/order.js";
 
 /**
- * Syncs status, rider, OTP, and location from child orders to their parent order.
+ * Syncs status from child orders to their parent order.
+ * Triggers delivery partner assignment on the parent order when all child orders are accepted.
  *
  * @param {Object} params
  * @param {string} params.parentOrderId - The parent order ObjectId
@@ -17,50 +18,38 @@ export const syncParentOrderStatus = async ({ parentOrderId, io }) => {
     if (children.length === 0) return;
 
     const statuses = children.map((c) => c.status);
+    const allResolved = children.every((c) => ["accepted", "rejected", "cancelled"].includes(c.status));
+    const hasAccepted = children.some((c) => c.status === "accepted");
 
-    // Aggregate child statuses into a consolidated parent status
-    let newStatus = "pending";
-    if (statuses.every((s) => s === "delivered")) {
-      newStatus = "delivered";
-    } else if (statuses.includes("outForDelivery")) {
-      newStatus = "outForDelivery";
-    } else if (statuses.includes("pickedUp")) {
-      newStatus = "pickedUp";
-    } else if (statuses.includes("acceptedByRider")) {
-      newStatus = "acceptedByRider";
-    } else if (statuses.every((s) => ["rejected", "cancelled"].includes(s))) {
-      newStatus = "rejected";
-    } else if (statuses.includes("available") || statuses.includes("accepted")) {
-      newStatus = "accepted";
+    let newStatus = parentOrder.status;
+
+    if (["pending", "accepted", "available"].includes(parentOrder.status)) {
+      if (allResolved && hasAccepted) {
+        // Trigger assignment on the PARENT order
+        const { assignDeliveryPartner } = await import("./deliveryAssignment.js");
+        await assignDeliveryPartner({ order: parentOrder, io });
+        return;
+      } else if (statuses.every((s) => ["rejected", "cancelled"].includes(s))) {
+        newStatus = "rejected";
+      } else if (statuses.includes("accepted")) {
+        newStatus = "accepted";
+      } else {
+        newStatus = "pending";
+      }
     }
 
     parentOrder.status = newStatus;
-
-    // Sync delivery partner info from any active child order
-    const activeChildWithRider = children.find((c) => c.deliveryPartner);
-    if (activeChildWithRider) {
-      parentOrder.deliveryPartner = activeChildWithRider.deliveryPartner;
-    }
-
-    // Sync OTP from any active child order
-    const activeChildWithOtp = children.find((c) => c.deliveryOtp);
-    if (activeChildWithOtp) {
-      parentOrder.deliveryOtp = activeChildWithOtp.deliveryOtp;
-    }
-
-    // Sync rider location from any active child order
-    const activeChildWithLoc = children.find(
-      (c) => c.deliveryPersonLocation?.latitude
-    );
-    if (activeChildWithLoc) {
-      parentOrder.deliveryPersonLocation = activeChildWithLoc.deliveryPersonLocation;
-    }
-
     await parentOrder.save();
 
-    const populatedParent = await Order.findById(parentOrderId).populate(
-      "customer branch items.item deliveryPartner"
-    );
+    const populatedParent = await Order.findById(parentOrderId)
+      .populate("customer branch deliveryPartner")
+      .populate({
+        path: "items.item",
+        populate: {
+          path: "shop",
+          select: "shopName shopAddress email phone"
+        }
+      });
 
     if (io && populatedParent) {
       // Emit tracking updates to parent room
@@ -83,5 +72,68 @@ export const syncParentOrderStatus = async ({ parentOrderId, io }) => {
     }
   } catch (error) {
     console.error("Error syncing parent order status:", error);
+  }
+};
+
+/**
+ * Syncs status, rider, OTP, and location from a parent order to all its child orders.
+ *
+ * @param {Object} params
+ * @param {Object} params.parentOrder - The parent order document
+ * @param {Object} params.io - Socket.io server instance
+ */
+export const syncChildOrders = async ({ parentOrder, io }) => {
+  try {
+    if (!parentOrder || !parentOrder.isParent) return;
+
+    const children = await Order.find({ parentOrder: parentOrder._id });
+    if (children.length === 0) return;
+
+    const childStatusMap = {
+      pending: "pending",
+      accepted: "accepted",
+      available: "accepted", // child orders stay accepted when parent is available
+      acceptedByRider: "acceptedByRider",
+      pickedUp: "pickedUp",
+      outForDelivery: "outForDelivery",
+      delivered: "delivered",
+      cancelled: "cancelled",
+      rejected: "rejected",
+    };
+
+    const targetChildStatus = childStatusMap[parentOrder.status] || "accepted";
+
+    for (const child of children) {
+      child.status = targetChildStatus;
+      child.deliveryPartner = parentOrder.deliveryPartner;
+      child.deliveryPersonLocation = parentOrder.deliveryPersonLocation;
+      child.deliveryOtp = parentOrder.deliveryOtp;
+      await child.save();
+
+      if (io) {
+        // Emit events for each child order to keep their tracking/shop rooms updated
+        io.to(child._id.toString()).emit("liveTrackingUpdates", child);
+      }
+
+      // Notify individual shop owners when order is delivered
+      if (parentOrder.status === "delivered" && child.shopOwner) {
+        try {
+          const { createNotification } = await import("./notificationService.js");
+          await createNotification({
+            recipient: child.shopOwner,
+            recipientModel: "ShopOwner",
+            title: "Order Delivered",
+            message: `Order ${child.orderId} has been delivered to the customer.`,
+            type: "delivery_completed",
+            orderId: child._id,
+            io,
+          });
+        } catch (err) {
+          console.error(`Failed to notify shop owner of delivery for child ${child._id}:`, err);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error syncing child orders from parent:", error);
   }
 };

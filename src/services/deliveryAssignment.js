@@ -24,6 +24,9 @@ export const assignDeliveryPartner = async ({ order, io }) => {
     order.deliveryPartner = undefined; // Ensure no rider is assigned initially
     await order.save();
 
+    const { syncChildOrders } = await import("./orderSyncService.js");
+    await syncChildOrders({ parentOrder: order, io });
+
     // Emit Socket.io event for real-time tracking
     if (io) {
       io.to(order._id.toString()).emit("order-available", {
