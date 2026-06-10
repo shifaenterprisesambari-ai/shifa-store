@@ -138,7 +138,7 @@ const Home = () => {
               className="absolute -left-12 -bottom-12 w-48 h-48 bg-black/10 rounded-full blur-2xl z-0"
             />
 
-            <div className="flex items-center justify-between w-full relative z-10">
+            <div className="flex items-center justify-between w-full max-w-4xl mx-auto relative z-10">
               <div className="flex flex-col items-center text-center sm:items-start sm:text-left max-w-xs sm:max-w-md mx-auto sm:mx-0">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
