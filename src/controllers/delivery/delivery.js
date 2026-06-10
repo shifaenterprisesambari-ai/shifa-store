@@ -45,7 +45,17 @@ export const getAssignedOrders = async (req, reply) => {
       })
       .sort({ createdAt: -1 });
 
-    return reply.send(orders);
+    // Fetch and attach child orders for each parent order
+    const ordersWithChildren = await Promise.all(orders.map(async (order) => {
+      const orderObj = order.toObject();
+      if (order.isParent) {
+        const children = await Order.find({ parentOrder: order._id }, { deliveryOtp: 0 });
+        orderObj.childOrders = children;
+      }
+      return orderObj;
+    }));
+
+    return reply.send(ordersWithChildren);
   } catch (error) {
     console.error("FAILED TO FETCH RIDER ORDERS:", error);
     return reply

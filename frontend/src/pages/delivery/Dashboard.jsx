@@ -222,9 +222,47 @@ const DeliveryDashboard = () => {
                             <p className="font-bold text-text truncate">{item.item?.name || 'Store Item'}</p>
                             <p className="text-[10px] text-text-secondary mt-0.5 font-medium">Quantity: {item.item?.quantity || '1 unit'}</p>
                             {item.item?.shop && (
-                              <p className="text-[9.5px] text-primary font-black mt-1.5 bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/15 w-fit">
-                                🏪 Shop: {item.item.shop.shopName || 'Main Shop'} ({item.item.shop.shopAddress || 'Address not listed'})
-                              </p>
+                              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                <span className="text-[9.5px] text-primary font-black bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/15">
+                                  🏪 Shop: {item.item.shop.shopName || 'Main Shop'} ({item.item.shop.shopAddress || 'Address not listed'})
+                                </span>
+                                {(() => {
+                                  const shopId = item.item.shop._id || item.item.shop;
+                                  const child = order.childOrders?.find(c => c.shopOwner?.toString() === shopId?.toString());
+                                  if (child) {
+                                    let statusText = child.status;
+                                    let badgeColor = "bg-yellow-500/10 text-yellow-600 border-yellow-500/20";
+                                    if (child.status === 'pending') {
+                                      statusText = 'Pending Store Acceptance ⏳';
+                                      badgeColor = "bg-amber-500/10 text-amber-600 border-amber-500/20";
+                                    } else if (child.status === 'accepted') {
+                                      statusText = 'Accepted & Preparing 🍳';
+                                      badgeColor = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+                                    } else if (child.status === 'acceptedByRider') {
+                                      statusText = 'Ready for Pickup 🚴';
+                                      badgeColor = "bg-purple-500/10 text-purple-600 border-purple-500/20";
+                                    } else if (child.status === 'pickedUp') {
+                                      statusText = 'Picked Up 📦';
+                                      badgeColor = "bg-teal-500/10 text-teal-600 border-teal-500/20";
+                                    } else if (child.status === 'outForDelivery') {
+                                      statusText = 'Out for Delivery 🗺️';
+                                      badgeColor = "bg-indigo-500/10 text-indigo-600 border-indigo-500/20";
+                                    } else if (child.status === 'delivered') {
+                                      statusText = 'Delivered ✅';
+                                      badgeColor = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+                                    } else if (child.status === 'rejected') {
+                                      statusText = 'Rejected by Store ❌';
+                                      badgeColor = "bg-rose-500/10 text-rose-600 border-rose-500/20";
+                                    }
+                                    return (
+                                      <span className={`text-[9.5px] font-black px-2.5 py-1 rounded-lg border ${badgeColor}`}>
+                                        {statusText}
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
                             )}
                           </div>
                           <div className="text-right shrink-0 mt-0.5">

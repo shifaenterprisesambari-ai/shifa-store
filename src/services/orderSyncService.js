@@ -18,28 +18,57 @@ export const syncParentOrderStatus = async ({ parentOrderId, io }) => {
     if (children.length === 0) return;
 
     const statuses = children.map((c) => c.status);
-    const allResolved = children.every((c) => ["accepted", "rejected", "cancelled"].includes(c.status));
-    const hasAccepted = children.some((c) => c.status === "accepted");
+
+    // 1. Rider-locking logic: if rider is already assigned, auto-sync any newly accepted child orders
+    if (parentOrder.deliveryPartner) {
+      for (const child of children) {
+        if (child.status === "accepted") {
+          child.status = parentOrder.status === "available" ? "accepted" : parentOrder.status;
+          child.deliveryPartner = parentOrder.deliveryPartner;
+          child.deliveryOtp = parentOrder.deliveryOtp;
+          child.deliveryPersonLocation = parentOrder.deliveryPersonLocation;
+          await child.save();
+
+          if (io) {
+            io.to(child._id.toString()).emit("liveTrackingUpdates", child);
+          }
+        }
+      }
+    } else {
+      // 2. Instant-sourcing logic: as soon as ANY shop owner accepts, make parent order available to riders
+      if (["pending", "accepted"].includes(parentOrder.status)) {
+        const hasAccepted = children.some((c) => c.status === "accepted");
+        if (hasAccepted) {
+          const { assignDeliveryPartner } = await import("./deliveryAssignment.js");
+          await assignDeliveryPartner({ order: parentOrder, io });
+          return;
+        }
+      }
+    }
 
     let newStatus = parentOrder.status;
 
+    // Status aggregation logic
     if (["pending", "accepted", "available"].includes(parentOrder.status)) {
-      if (allResolved && hasAccepted) {
-        // Trigger assignment on the PARENT order
-        const { assignDeliveryPartner } = await import("./deliveryAssignment.js");
-        await assignDeliveryPartner({ order: parentOrder, io });
-        return;
-      } else if (statuses.every((s) => ["rejected", "cancelled"].includes(s))) {
+      if (statuses.every((s) => ["rejected", "cancelled"].includes(s))) {
         newStatus = "rejected";
       } else if (statuses.includes("accepted")) {
         newStatus = "accepted";
       } else {
         newStatus = "pending";
       }
+    } else {
+      // If parent has a rider, it completes when all non-rejected products are delivered
+      const activeChildren = children.filter((c) => c.status !== "rejected" && c.status !== "cancelled");
+      if (activeChildren.length > 0 && activeChildren.every((c) => c.status === "delivered")) {
+        newStatus = "delivered";
+      }
     }
 
-    parentOrder.status = newStatus;
-    await parentOrder.save();
+    if (parentOrder.status !== newStatus) {
+      parentOrder.status = newStatus;
+      await parentOrder.save();
+    }
 
     const populatedParent = await Order.findById(parentOrderId)
       .populate("customer branch deliveryPartner")
@@ -51,23 +80,29 @@ export const syncParentOrderStatus = async ({ parentOrderId, io }) => {
         }
       });
 
-    if (io && populatedParent) {
-      // Emit tracking updates to parent room
-      io.to(parentOrderId.toString()).emit("liveTrackingUpdates", populatedParent);
+    if (populatedParent) {
+      const parentObj = populatedParent.toObject();
+      const childrenList = await Order.find({ parentOrder: parentOrderId });
+      parentObj.childOrders = childrenList;
 
-      const eventNameMap = {
-        accepted: "order-accepted",
-        available: "order-available",
-        acceptedByRider: "order-accepted-by-rider",
-        pickedUp: "picked-up",
-        outForDelivery: "out-for-delivery",
-        delivered: "delivered",
-        rejected: "order-rejected",
-        cancelled: "order-cancelled",
-      };
-      const eventName = eventNameMap[newStatus];
-      if (eventName) {
-        io.to(parentOrderId.toString()).emit(eventName, populatedParent);
+      if (io) {
+        // Emit tracking updates to parent room
+        io.to(parentOrderId.toString()).emit("liveTrackingUpdates", parentObj);
+
+        const eventNameMap = {
+          accepted: "order-accepted",
+          available: "order-available",
+          acceptedByRider: "order-accepted-by-rider",
+          pickedUp: "picked-up",
+          outForDelivery: "out-for-delivery",
+          delivered: "delivered",
+          rejected: "order-rejected",
+          cancelled: "order-cancelled",
+        };
+        const eventName = eventNameMap[newStatus];
+        if (eventName) {
+          io.to(parentOrderId.toString()).emit(eventName, parentObj);
+        }
       }
     }
   } catch (error) {
@@ -104,6 +139,24 @@ export const syncChildOrders = async ({ parentOrder, io }) => {
     const targetChildStatus = childStatusMap[parentOrder.status] || "accepted";
 
     for (const child of children) {
+      // 1. Keep already finalized/rejected/cancelled child orders unchanged
+      if (["rejected", "cancelled", "delivered"].includes(child.status)) {
+        continue;
+      }
+
+      // 2. Keep pending orders as pending, but sync the rider, location, and OTP
+      if (child.status === "pending") {
+        child.deliveryPartner = parentOrder.deliveryPartner;
+        child.deliveryPersonLocation = parentOrder.deliveryPersonLocation;
+        child.deliveryOtp = parentOrder.deliveryOtp;
+        await child.save();
+
+        if (io) {
+          io.to(child._id.toString()).emit("liveTrackingUpdates", child);
+        }
+        continue;
+      }
+
       child.status = targetChildStatus;
       child.deliveryPartner = parentOrder.deliveryPartner;
       child.deliveryPersonLocation = parentOrder.deliveryPersonLocation;

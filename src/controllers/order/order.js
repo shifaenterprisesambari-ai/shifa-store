@@ -366,7 +366,16 @@ export const getOrders = async (req, reply) => {
           }
         });
   
-      return reply.send(orders);
+      const ordersWithChildren = await Promise.all(orders.map(async (order) => {
+        const orderObj = order.toObject();
+        if (order.isParent) {
+          const children = await Order.find({ parentOrder: order._id });
+          orderObj.childOrders = children;
+        }
+        return orderObj;
+      }));
+
+      return reply.send(ordersWithChildren);
     } catch (error) {
       return reply
         .status(500)
@@ -392,7 +401,13 @@ export const getOrderById = async (req, reply) => {
         return reply.status(404).send({ message: "Order not found" });
       }
   
-      return reply.send(order);
+      const orderObj = order.toObject();
+      if (order.isParent) {
+        const children = await Order.find({ parentOrder: order._id });
+        orderObj.childOrders = children;
+      }
+
+      return reply.send(orderObj);
     } catch (error) {
       return reply
         .status(500)
