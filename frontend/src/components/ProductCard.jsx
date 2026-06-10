@@ -77,13 +77,13 @@ const ProductCard = ({ product, index = 0 }) => {
 
           {cartItem ? (
             <div className="flex items-center gap-0.5 sm:gap-1 bg-primary rounded-lg overflow-hidden">
-              <motion.button whileTap={{ scale: 0.85 }} onClick={() => dispatch(decrementQty(product._id))} className="px-1.5 py-1 sm:px-2.5 sm:py-1.5 text-white hover:bg-primary-dark transition-colors cursor-pointer">
+              <motion.button whileTap={{ scale: 0.85 }} onClick={() => dispatch(decrementQty(product._id))} className="px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-white hover:bg-primary-dark transition-colors cursor-pointer">
                 <FiMinus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </motion.button>
               <motion.span key={cartItem.count} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="text-white text-xs sm:text-sm font-bold min-w-[16px] sm:min-w-[20px] text-center">
                 {cartItem.count}
               </motion.span>
-              <motion.button whileTap={{ scale: 0.85 }} onClick={() => dispatch(incrementQty(product._id))} className="px-1.5 py-1 sm:px-2.5 sm:py-1.5 text-white hover:bg-primary-dark transition-colors cursor-pointer">
+              <motion.button whileTap={{ scale: 0.85 }} onClick={() => dispatch(incrementQty(product._id))} className="px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-white hover:bg-primary-dark transition-colors cursor-pointer">
                 <FiPlus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </motion.button>
             </div>
@@ -91,7 +91,7 @@ const ProductCard = ({ product, index = 0 }) => {
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => dispatch(addToCart(product))}
-              className="px-3 sm:px-4 py-1 sm:py-1.5 border-2 border-primary text-primary text-xs sm:text-sm font-bold rounded-lg hover:bg-primary hover:text-white transition-all active:scale-95 cursor-pointer"
+              className="px-5 sm:px-7 py-1.5 sm:py-2 border-2 border-primary text-primary text-xs sm:text-sm font-extrabold rounded-lg hover:bg-primary hover:text-white transition-all active:scale-95 cursor-pointer"
             >
               ADD
             </motion.button>

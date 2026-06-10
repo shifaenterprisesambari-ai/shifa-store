@@ -176,10 +176,10 @@ const Home = () => {
                     whileHover={{ scale: 1.05, boxShadow: '0 8px 20px -8px rgba(255,255,255,0.45)' }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => navigate('/search')}
-                    className="px-4 py-2 sm:px-6 sm:py-3 bg-white hover:bg-yellow-50 text-gray-950 font-black text-xs sm:text-sm rounded-md sm:rounded-lg shadow-md cursor-pointer inline-flex items-center gap-1.5 transition-all group"
+                    className="px-6 py-3 sm:px-8 sm:py-4 bg-white hover:bg-yellow-50 text-gray-950 font-black text-sm sm:text-base rounded-lg sm:rounded-xl shadow-lg cursor-pointer inline-flex items-center gap-2 transition-all group"
                   >
                     Shop Now 
-                    <FiArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary group-hover:translate-x-0.5 transition-transform" />
+                    <FiArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-primary group-hover:translate-x-0.5 transition-transform" />
                   </motion.button>
                 </div>
               </div>
@@ -341,9 +341,9 @@ const Home = () => {
                         dispatch(addToCart(cartProduct));
                         toast.success(`${item.name} added to cart!`);
                       }}
-                      className="w-7 h-7 bg-primary text-white rounded-full flex items-center justify-center shadow-md hover:bg-primary-dark hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                      className="w-9 h-9 sm:w-11 sm:h-11 bg-primary text-white rounded-full flex items-center justify-center shadow-md hover:bg-primary-dark hover:scale-110 active:scale-95 transition-all cursor-pointer"
                     >
-                      <span className="text-lg font-black leading-none">+</span>
+                      <span className="text-xl sm:text-2xl font-black leading-none">+</span>
                     </button>
                   </div>
                 </motion.div>
