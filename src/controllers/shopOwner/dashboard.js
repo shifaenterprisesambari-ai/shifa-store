@@ -12,16 +12,15 @@ export const getDashboardStats = async (req, reply) => {
     const { userId } = req.user;
 
     const shopOwner = await ShopOwner.findById(userId);
-    const shopId = shopOwner?.shop || userId;
     const branchId = shopOwner?.branch;
 
-    // Build aggregations/counts matching custom shop ID or user ID
-    const productQuery = { $or: [ { shop: shopId }, { shop: userId } ] };
-    const activeProductQuery = { 
-      $or: [ { shop: shopId }, { shop: userId } ], 
-      isEnabled: true, 
-      isAvailable: true 
-    };
+    // Collect every possible ID that might be stored as the product's `shop` field
+    const possibleIds = [new mongoose.Types.ObjectId(userId)];
+    if (shopOwner?.shop) possibleIds.push(shopOwner.shop);
+    if (shopOwner?.branch) possibleIds.push(shopOwner.branch);
+
+    const productQuery = { shop: { $in: possibleIds } };
+    const activeProductQuery = { shop: { $in: possibleIds }, isEnabled: true, isAvailable: true };
 
     const orderQuery = { shopOwner: userId };
 

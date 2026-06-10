@@ -1,8 +1,12 @@
+import mongoose from "mongoose";
 import Product from "../../models/products.js";
 import { ShopOwner } from "../../models/user.js";
 
 /**
  * Get all products belonging to the authenticated shop owner.
+ * Builds a broad $in query covering all IDs associated with this owner
+ * (their user _id, their shop field, and their branch _id) so products
+ * seeded with any of those IDs are all returned correctly.
  */
 export const getShopProducts = async (req, reply) => {
   try {
@@ -10,9 +14,13 @@ export const getShopProducts = async (req, reply) => {
     const { category, isAvailable, isEnabled } = req.query;
 
     const shopOwner = await ShopOwner.findById(userId);
-    const shopId = shopOwner?.shop || userId;
 
-    const query = { $or: [ { shop: shopId }, { shop: userId } ] };
+    // Collect every possible ID that might be stored as the product's `shop` field
+    const possibleIds = [new mongoose.Types.ObjectId(userId)];
+    if (shopOwner?.shop) possibleIds.push(shopOwner.shop);
+    if (shopOwner?.branch) possibleIds.push(shopOwner.branch);
+
+    const query = { shop: { $in: possibleIds } };
     if (category) query.category = category;
     if (isAvailable !== undefined) query.isAvailable = isAvailable === "true";
     if (isEnabled !== undefined) query.isEnabled = isEnabled === "true";
@@ -23,6 +31,7 @@ export const getShopProducts = async (req, reply) => {
 
     return reply.send(products);
   } catch (error) {
+    console.error("getShopProducts error:", error);
     return reply
       .status(500)
       .send({ message: "Failed to fetch products", error });
