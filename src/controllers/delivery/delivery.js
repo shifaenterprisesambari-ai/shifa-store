@@ -395,50 +395,117 @@ export const completeDelivery = async (req, reply) => {
       return reply.status(400).send({ message: "Invalid OTP" });
     }
 
-    order.status = "delivered";
-    order.otpVerified = true;
-    await order.save();
-
-    // Mark delivery partner as available again since their active assignments count has decreased
-    await DeliveryPartner.findByIdAndUpdate(userId, { isAvailable: true });
-
+    const children = await Order.find({ parentOrder: order._id });
     const io = req.server.io;
-    if (io) {
-      io.to(order._id.toString()).emit("delivered", {
-        orderId: order._id,
-        status: "delivered",
-      });
+
+    // Find children in active delivery states and mark them as delivered
+    const deliverableChildren = children.filter((c) => 
+      ["acceptedByRider", "pickedUp", "outForDelivery"].includes(c.status)
+    );
+
+    for (const child of deliverableChildren) {
+      child.status = "delivered";
+      await child.save();
+
+      if (io) {
+        io.to(child._id.toString()).emit("delivered", {
+          orderId: child._id,
+          status: "delivered",
+        });
+      }
+
+      // Notify individual shop owner of delivery
+      if (child.shopOwner) {
+        try {
+          await createNotification({
+            recipient: child.shopOwner,
+            recipientModel: "ShopOwner",
+            title: "Order Delivered",
+            message: `Order ${child.orderId} has been delivered to the customer.`,
+            type: "delivery_completed",
+            orderId: child._id,
+            io,
+          });
+        } catch (err) {
+          console.error(`Failed to notify shop owner of delivery for child ${child._id}:`, err);
+        }
+      }
     }
 
-    // Notify customer
-    await createNotification({
-      recipient: order.customer,
-      recipientModel: "Customer",
-      title: "Order Delivered",
-      message: `Your order ${order.orderId} has been delivered successfully!`,
-      type: "delivered",
-      orderId: order._id,
-      io,
-    });
+    // Check if there are any remaining active (non-finalized) child orders
+    const remainingChildren = await Order.find({ parentOrder: order._id });
+    const hasActiveChildren = remainingChildren.some((c) => 
+      !["delivered", "rejected", "cancelled"].includes(c.status)
+    );
 
-    // Notify delivery partner
-    await createNotification({
-      recipient: userId,
-      recipientModel: "DeliveryPartner",
-      title: "Delivery Completed",
-      message: `You have successfully delivered order ${order.orderId}.`,
-      type: "delivery_completed",
-      orderId: order._id,
-      io,
-    });
+    if (hasActiveChildren) {
+      // Transition parent order status back to acceptedByRider so rider can continue delivering the rest later
+      order.status = "acceptedByRider";
+      order.otpVerified = false;
+      await order.save();
 
-    await syncChildOrders({ parentOrder: order, io });
+      if (io) {
+        io.to(order._id.toString()).emit("liveTrackingUpdates", order);
+      }
+
+      // Notify customer of partial delivery
+      await createNotification({
+        recipient: order.customer,
+        recipientModel: "Customer",
+        title: "Partial Order Delivered",
+        message: `A portion of your order ${order.orderId} has been delivered. Remaining items will be delivered once accepted by stores.`,
+        type: "out_for_delivery",
+        orderId: order._id,
+        io,
+      });
+
+      await syncChildOrders({ parentOrder: order, io });
+    } else {
+      // All child orders are finalized
+      order.status = "delivered";
+      order.otpVerified = true;
+      await order.save();
+
+      // Mark delivery partner as available again since their active assignments count has decreased
+      await DeliveryPartner.findByIdAndUpdate(userId, { isAvailable: true });
+
+      if (io) {
+        io.to(order._id.toString()).emit("delivered", {
+          orderId: order._id,
+          status: "delivered",
+        });
+      }
+
+      // Notify customer
+      await createNotification({
+        recipient: order.customer,
+        recipientModel: "Customer",
+        title: "Order Delivered",
+        message: `Your order ${order.orderId} has been fully delivered successfully!`,
+        type: "delivered",
+        orderId: order._id,
+        io,
+      });
+
+      // Notify delivery partner
+      await createNotification({
+        recipient: userId,
+        recipientModel: "DeliveryPartner",
+        title: "Delivery Completed",
+        message: `You have successfully completed order ${order.orderId}.`,
+        type: "delivery_completed",
+        orderId: order._id,
+        io,
+      });
+
+      await syncChildOrders({ parentOrder: order, io });
+    }
 
     // Exclude deliveryOtp for security
     const orderObj = order.toObject();
     delete orderObj.deliveryOtp;
 
-    return reply.send({ message: "Delivery completed successfully", order: orderObj });
+    return reply.send({ message: "Delivery progress updated successfully", order: orderObj });
   } catch (error) {
     return reply
       .status(500)
