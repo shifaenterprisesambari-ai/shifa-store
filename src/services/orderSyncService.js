@@ -25,7 +25,9 @@ export const syncParentOrderStatus = async ({ parentOrderId, io }) => {
         if (child.status === "accepted") {
           child.status = parentOrder.status === "available" ? "accepted" : parentOrder.status;
           child.deliveryPartner = parentOrder.deliveryPartner;
-          child.deliveryOtp = parentOrder.deliveryOtp;
+          if (parentOrder.deliveryOtp !== "Multiple OTPs") {
+            child.deliveryOtp = parentOrder.deliveryOtp;
+          }
           child.deliveryPersonLocation = parentOrder.deliveryPersonLocation;
           await child.save();
 
@@ -148,7 +150,9 @@ export const syncChildOrders = async ({ parentOrder, io }) => {
       if (child.status === "pending") {
         child.deliveryPartner = parentOrder.deliveryPartner;
         child.deliveryPersonLocation = parentOrder.deliveryPersonLocation;
-        child.deliveryOtp = parentOrder.deliveryOtp;
+        if (parentOrder.deliveryOtp !== "Multiple OTPs") {
+          child.deliveryOtp = parentOrder.deliveryOtp;
+        }
         await child.save();
 
         if (io) {
@@ -160,7 +164,9 @@ export const syncChildOrders = async ({ parentOrder, io }) => {
       child.status = targetChildStatus;
       child.deliveryPartner = parentOrder.deliveryPartner;
       child.deliveryPersonLocation = parentOrder.deliveryPersonLocation;
-      child.deliveryOtp = parentOrder.deliveryOtp;
+      if (parentOrder.deliveryOtp !== "Multiple OTPs") {
+        child.deliveryOtp = parentOrder.deliveryOtp;
+      }
       await child.save();
 
       if (io) {

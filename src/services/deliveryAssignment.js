@@ -15,12 +15,37 @@ import { syncParentOrderStatus } from "./orderSyncService.js";
  */
 export const assignDeliveryPartner = async ({ order, io }) => {
   try {
-    // Generate plain OTP for delivery verification
-    const plainOtp = generateOtp();
+    const children = await Order.find({ parentOrder: order._id });
+    let plainOtp = "";
+    let isMultiOtp = false;
+
+    if (children && children.length > 0) {
+      const shopOwnerIds = children.map(c => c.shopOwner?.toString()).filter(Boolean);
+      const uniqueShopOwners = [...new Set(shopOwnerIds)];
+
+      if (uniqueShopOwners.length > 1) {
+        isMultiOtp = true;
+        order.deliveryOtp = "Multiple OTPs";
+        for (const child of children) {
+          const childOtp = generateOtp();
+          child.deliveryOtp = childOtp;
+          await child.save();
+        }
+      } else {
+        plainOtp = generateOtp();
+        order.deliveryOtp = plainOtp;
+        for (const child of children) {
+          child.deliveryOtp = plainOtp;
+          await child.save();
+        }
+      }
+    } else {
+      plainOtp = generateOtp();
+      order.deliveryOtp = plainOtp;
+    }
 
     // Update the order to available state
     order.status = "available";
-    order.deliveryOtp = plainOtp;
     order.deliveryPartner = undefined; // Ensure no rider is assigned initially
     await order.save();
 
@@ -40,12 +65,29 @@ export const assignDeliveryPartner = async ({ order, io }) => {
       });
     }
 
+    // Construct notification message
+    let notificationMessage = "";
+    if (isMultiOtp) {
+      const childOrdersWithShops = await Order.find({ parentOrder: order._id }).populate({
+        path: "items.item",
+        populate: { path: "shop", select: "shopName" }
+      });
+      notificationMessage = `Your order ${order.orderId} is being prepared. It contains items from multiple shops, requiring separate delivery OTPs:\n`;
+      for (const child of childOrdersWithShops) {
+        const shopName = child.items?.[0]?.item?.shop?.shopName || "Shop";
+        notificationMessage += `- ${shopName}: OTP ${child.deliveryOtp}\n`;
+      }
+      notificationMessage += "Share each OTP only with the delivery partner upon receiving items from that shop.";
+    } else {
+      notificationMessage = `Your order ${order.orderId} is being prepared by the shop. Your delivery OTP is: ${order.deliveryOtp || plainOtp}. Share this only with the delivery partner upon delivery.`;
+    }
+
     // Notify customer — send plain OTP in notification
     await createNotification({
       recipient: order.customer,
       recipientModel: "Customer",
       title: "Order Accepted & Preparing",
-      message: `Your order ${order.orderId} is being prepared by the shop. Your delivery OTP is: ${plainOtp}. Share this only with the delivery partner upon delivery.`,
+      message: notificationMessage,
       type: "rider_assigned",
       orderId: order._id,
       io,

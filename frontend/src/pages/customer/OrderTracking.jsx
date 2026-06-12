@@ -96,12 +96,44 @@ const OrderTracking = () => {
       </div>
 
       {/* Delivery Verification OTP */}
-      {order.deliveryOtp && !['delivered', 'cancelled', 'rejected'].includes(order.status) && (
-        <div className="bg-primary/5 rounded-2xl border border-primary/20 p-5 mb-4 shadow-sm text-center">
-          <p className="text-xs text-primary font-bold uppercase tracking-wider">Delivery Verification OTP</p>
-          <p className="text-3xl font-black text-primary mt-2 tracking-widest">{order.deliveryOtp}</p>
-          <p className="text-[10px] text-text-secondary mt-2">Provide this 4-digit OTP to the delivery partner when they arrive.</p>
-        </div>
+      {!['delivered', 'cancelled', 'rejected'].includes(order.status) && (
+        (() => {
+          const activeChildOrders = order.childOrders?.filter((c) =>
+            !['delivered', 'cancelled', 'rejected'].includes(c.status)
+          ) || [];
+
+          if (order.deliveryOtp === 'Multiple OTPs') {
+            return activeChildOrders.length > 0 && (
+              <div className="bg-primary/5 rounded-2xl border border-primary/20 p-5 mb-4 shadow-sm">
+                <p className="text-xs text-primary font-bold uppercase tracking-wider text-center mb-3">Delivery Verification OTPs</p>
+                <div className="space-y-2">
+                  {activeChildOrders.map((child) => {
+                    const productNames = child.items?.map((it) => it.item?.name).filter(Boolean).join(', ') || 'Products';
+                    return (
+                      <div key={child._id} className="flex justify-between items-center bg-white rounded-xl p-3 border border-border/40 shadow-sm">
+                        <span className="text-sm font-semibold text-text line-clamp-1 flex-1 pr-4">{productNames}</span>
+                        <span className="text-xl font-bold text-primary tracking-widest">{child.deliveryOtp}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-text-secondary mt-3 text-center">Your order contains items from multiple shops. Provide the respective OTP to the rider as you receive each delivery.</p>
+              </div>
+            );
+          }
+
+          if (order.deliveryOtp) {
+            return (
+              <div className="bg-primary/5 rounded-2xl border border-primary/20 p-5 mb-4 shadow-sm text-center">
+                <p className="text-xs text-primary font-bold uppercase tracking-wider">Delivery Verification OTP</p>
+                <p className="text-3xl font-black text-primary mt-2 tracking-widest">{order.deliveryOtp}</p>
+                <p className="text-[10px] text-text-secondary mt-2">Provide this 4-digit OTP to the delivery partner when they arrive.</p>
+              </div>
+            );
+          }
+
+          return null;
+        })()
       )}
 
       {/* Delivery Partner Info */}

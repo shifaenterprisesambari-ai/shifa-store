@@ -20,12 +20,14 @@ export const getAssignedOrders = async (req, reply) => {
       query = {
         status: "available",
         isParent: true,
+        paymentStatus: { $ne: "unpaid" },
         ...(branchId ? { branch: branchId } : {})
       };
     } else {
       query = { 
         deliveryPartner: userId,
-        isParent: true 
+        isParent: true,
+        paymentStatus: { $ne: "unpaid" }
       };
       if (status) {
         query.status = status;
@@ -334,11 +336,26 @@ export const startDelivery = async (req, reply) => {
       });
     }
 
+    let startDeliveryMessage = `Your order ${order.orderId} is out for delivery! `;
+    if (order.deliveryOtp === "Multiple OTPs") {
+      const childOrdersWithShops = await Order.find({ parentOrder: order._id }).populate({
+        path: "items.item",
+        populate: { path: "shop", select: "shopName" }
+      });
+      startDeliveryMessage += "Share the respective OTP for each shop with the rider:\n";
+      for (const child of childOrdersWithShops) {
+        const shopName = child.items?.[0]?.item?.shop?.shopName || "Shop";
+        startDeliveryMessage += `- ${shopName}: OTP ${child.deliveryOtp}\n`;
+      }
+    } else {
+      startDeliveryMessage += `Share OTP ${order.deliveryOtp} with the delivery partner upon arrival.`;
+    }
+
     await createNotification({
       recipient: order.customer,
       recipientModel: "Customer",
       title: "Out For Delivery",
-      message: `Your order ${order.orderId} is out for delivery! Share OTP ${order.deliveryOtp} with the delivery partner upon arrival.`,
+      message: startDeliveryMessage,
       type: "out_for_delivery",
       orderId: order._id,
       io,
@@ -389,46 +406,53 @@ export const completeDelivery = async (req, reply) => {
       });
     }
 
-    // Verify OTP
-    const isValidOtp = await verifyOtp(otp, order.deliveryOtp);
-    if (!isValidOtp) {
-      return reply.status(400).send({ message: "Invalid OTP" });
-    }
-
     const children = await Order.find({ parentOrder: order._id });
     const io = req.server.io;
 
-    // Find children in active delivery states and mark them as delivered
-    const deliverableChildren = children.filter((c) => 
+    // Find the specific child order that matches this OTP
+    let matchedChild = null;
+    const activeChildren = children.filter((c) =>
       ["acceptedByRider", "pickedUp", "outForDelivery"].includes(c.status)
     );
 
-    for (const child of deliverableChildren) {
-      child.status = "delivered";
-      await child.save();
-
-      if (io) {
-        io.to(child._id.toString()).emit("delivered", {
-          orderId: child._id,
-          status: "delivered",
-        });
+    for (const child of activeChildren) {
+      const targetOtp = (order.deliveryOtp === "Multiple OTPs") ? child.deliveryOtp : order.deliveryOtp;
+      const isValid = await verifyOtp(otp, targetOtp);
+      if (isValid) {
+        matchedChild = child;
+        break;
       }
+    }
 
-      // Notify individual shop owner of delivery
-      if (child.shopOwner) {
-        try {
-          await createNotification({
-            recipient: child.shopOwner,
-            recipientModel: "ShopOwner",
-            title: "Order Delivered",
-            message: `Order ${child.orderId} has been delivered to the customer.`,
-            type: "delivery_completed",
-            orderId: child._id,
-            io,
-          });
-        } catch (err) {
-          console.error(`Failed to notify shop owner of delivery for child ${child._id}:`, err);
-        }
+    if (!matchedChild) {
+      return reply.status(400).send({ message: "Invalid OTP" });
+    }
+
+    // Now mark only the matched child order as delivered
+    matchedChild.status = "delivered";
+    await matchedChild.save();
+
+    if (io) {
+      io.to(matchedChild._id.toString()).emit("delivered", {
+        orderId: matchedChild._id,
+        status: "delivered",
+      });
+    }
+
+    // Notify individual shop owner of delivery
+    if (matchedChild.shopOwner) {
+      try {
+        await createNotification({
+          recipient: matchedChild.shopOwner,
+          recipientModel: "ShopOwner",
+          title: "Order Delivered",
+          message: `Order ${matchedChild.orderId} has been delivered to the customer.`,
+          type: "delivery_completed",
+          orderId: matchedChild._id,
+          io,
+        });
+      } catch (err) {
+        console.error(`Failed to notify shop owner of delivery for child ${matchedChild._id}:`, err);
       }
     }
 
@@ -439,8 +463,8 @@ export const completeDelivery = async (req, reply) => {
     );
 
     if (hasActiveChildren) {
-      // Transition parent order status back to acceptedByRider so rider can continue delivering the rest later
-      order.status = "acceptedByRider";
+      // Transition parent order status back to acceptedByRider / keep outForDelivery
+      order.status = "outForDelivery";
       order.otpVerified = false;
       await order.save();
 
@@ -453,7 +477,7 @@ export const completeDelivery = async (req, reply) => {
         recipient: order.customer,
         recipientModel: "Customer",
         title: "Partial Order Delivered",
-        message: `A portion of your order ${order.orderId} has been delivered. Remaining items will be delivered once accepted by stores.`,
+        message: `A portion of your order ${order.orderId} has been delivered. Remaining items will be delivered once OTPs are verified.`,
         type: "out_for_delivery",
         orderId: order._id,
         io,

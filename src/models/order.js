@@ -83,6 +83,19 @@ const orderSchema= new mongoose.Schema({
       },
       platformEarnings: { type: Number, default: 0 },
       vendorPayout: { type: Number, default: 0 },
+      paymentMethod: {
+        type: String,
+        enum: ["COD", "Online"],
+        default: "COD",
+      },
+      paymentStatus: {
+        type: String,
+        enum: ["unpaid", "paid", "COD", "failed"],
+        default: "COD",
+      },
+      razorpayOrderId: { type: String },
+      razorpayPaymentId: { type: String },
+      razorpaySignature: { type: String },
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now },
 });

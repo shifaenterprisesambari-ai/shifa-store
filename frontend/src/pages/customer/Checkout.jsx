@@ -2,11 +2,24 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
-import { FiArrowLeft, FiMapPin, FiClock } from 'react-icons/fi';
+import { FiArrowLeft, FiMapPin, FiClock, FiCreditCard, FiDollarSign } from 'react-icons/fi';
 import { selectCartItems, selectCartTotal, clearCart } from '../../store/cartSlice';
 import { orderService } from '../../services/orderService';
 import { productService } from '../../services/productService';
+import { authService } from '../../services/authService';
+import { updateProfile } from '../../store/authSlice';
+import MapLocationPicker from '../../components/ui/MapLocationPicker';
 import toast from 'react-hot-toast';
+
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 const Checkout = () => {
   const items = useSelector(selectCartItems);
@@ -16,6 +29,42 @@ const Checkout = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [branches, setBranches] = useState([]);
+  const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [showMap, setShowMap] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+
+  useEffect(() => {
+    if (user && !selectedLocation) {
+      setSelectedLocation({
+        address: user.address || user.addresses?.[0]?.address || '',
+        latitude: user.liveLocation?.latitude || user.addresses?.[0]?.latitude || null,
+        longitude: user.liveLocation?.longitude || user.addresses?.[0]?.longitude || null
+      });
+    }
+  }, [user]);
+
+  const handleLocationSelect = async (loc) => {
+    setSelectedLocation(loc);
+    dispatch(updateProfile({
+      address: loc.address,
+      liveLocation: {
+        latitude: loc.latitude,
+        longitude: loc.longitude
+      }
+    }));
+    try {
+      await authService.updateUser({
+        address: loc.address,
+        liveLocation: {
+          latitude: loc.latitude,
+          longitude: loc.longitude
+        }
+      });
+      toast.success('Location updated & saved to your profile! 📍');
+    } catch (err) {
+      console.error('Failed to update profile location:', err);
+    }
+  };
   const deliveryFee = total > 199 ? 0 : 25;
   const grandTotal = total + deliveryFee;
 
@@ -31,19 +80,88 @@ const Checkout = () => {
       const orderItems = items.map((item) => ({ id: item._id, item: item._id, count: item.count }));
       // Use first available branch or item shop
       const branchId = items[0]?.shop || items[0]?.branch;
-      const { data } = await orderService.createOrder({
+      
+      const payload = {
         items: orderItems,
         branch: branchId,
         totalPrice: grandTotal,
-      });
-      dispatch(clearCart());
-      toast.success('Order placed successfully! 🎉');
-      navigate(`/order-tracking/${data._id}`);
+        paymentMethod: paymentMethod,
+      };
+
+      if (selectedLocation) {
+        payload.deliveryLocation = {
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+          address: selectedLocation.address
+        };
+      }
+
+      const { data } = await orderService.createOrder(payload);
+
+      if (paymentMethod === 'Online') {
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          toast.error('Failed to load payment gateway script. Please check your connection.');
+          setLoading(false);
+          return;
+        }
+
+        const options = {
+          key: data.razorpayOrder.key,
+          amount: data.razorpayOrder.amount,
+          currency: data.razorpayOrder.currency,
+          name: 'Shifa Store',
+          description: 'Payment for your order',
+          order_id: data.razorpayOrder.id,
+          handler: async (response) => {
+            setLoading(true);
+            try {
+              const verifyRes = await orderService.verifyPayment({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+
+              dispatch(clearCart());
+              toast.success('Payment successful & Order placed! 🎉');
+              navigate(`/order-tracking/${verifyRes.data.order._id}`);
+            } catch (err) {
+              console.error('Payment verification failed:', err);
+              toast.error(err.response?.data?.message || 'Payment verification failed');
+            } finally {
+              setLoading(false);
+            }
+          },
+          prefill: {
+            name: user?.name || '',
+            email: user?.email || '',
+            contact: user?.phone || '',
+          },
+          theme: {
+            color: '#10B981',
+          },
+          modal: {
+            ondismiss: () => {
+              toast.error('Payment cancelled');
+              setLoading(false);
+            }
+          }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      } else {
+        dispatch(clearCart());
+        toast.success('Order placed successfully! 🎉');
+        navigate(`/order-tracking/${data._id}`);
+      }
     } catch (e) {
       console.error("Order creation failed error:", e);
       toast.error(e.response?.data?.message || e.message || 'Failed to place order');
     } finally {
-      setLoading(false);
+      if (paymentMethod !== 'Online') {
+        setLoading(false);
+      }
     }
   };
 
@@ -55,16 +173,51 @@ const Checkout = () => {
       </div>
 
       {/* Delivery Address */}
-      <div className="bg-white rounded-2xl border border-border/30 p-5 mb-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><FiMapPin className="w-5 h-5 text-primary" /></div>
-          <div className="flex-1">
+      <div className="bg-white rounded-2xl border border-border/30 p-5 mb-4 shadow-sm animate-fade-in">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-1"><FiMapPin className="w-5 h-5 text-primary" /></div>
+          <div className="flex-1 min-w-0">
             <h3 className="text-sm font-bold text-text">Delivery Address</h3>
-            <p className="text-xs text-text-secondary mt-0.5">{user?.address || user?.addresses?.[0]?.address || 'Set your delivery address'}</p>
+            <textarea
+              rows={2}
+              value={selectedLocation?.address || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedLocation(prev => ({ ...prev, address: val }));
+                dispatch(updateProfile({ address: val }));
+                authService.updateUser({ address: val }).catch(console.error);
+              }}
+              placeholder="Type or edit your delivery address manually here..."
+              className="w-full text-xs text-text font-bold mt-1 bg-bg-secondary p-2.5 rounded-xl border border-border/30 focus:outline-none focus:border-primary/45 focus:bg-white transition-all resize-none h-16 leading-relaxed"
+            />
+            {selectedLocation?.latitude && selectedLocation?.longitude && (
+              <p className="text-[10px] text-text-tertiary font-semibold mt-1.5 flex items-center gap-1">
+                📍 Coordinates: {selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}
+              </p>
+            )}
           </div>
-          <Link to="/profile" className="text-xs text-primary font-semibold">Change</Link>
+          <button 
+            type="button" 
+            onClick={() => setShowMap(true)}
+            className="text-xs text-primary font-bold cursor-pointer hover:underline border-none bg-transparent outline-none py-1.5 px-3 rounded-lg hover:bg-primary/5 transition-all shrink-0 mt-1"
+          >
+            Pin on Map
+          </button>
         </div>
       </div>
+
+      {showMap && (
+        <MapLocationPicker
+          title="Pin Delivery Location"
+          initialCoords={{
+            latitude: selectedLocation?.latitude,
+            longitude: selectedLocation?.longitude
+          }}
+          initialAddress={selectedLocation?.address || ''}
+          onClose={() => setShowMap(false)}
+          onSelect={handleLocationSelect}
+        />
+      )}
 
       {/* Order Items */}
       <div className="bg-white rounded-2xl border border-border/30 p-5 mb-4 shadow-sm">
@@ -80,6 +233,37 @@ const Checkout = () => {
               <span className="text-sm font-bold">₹{item.price * item.count}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Payment Method */}
+      <div className="bg-white rounded-2xl border border-border/30 p-5 mb-4 shadow-sm">
+        <h3 className="text-sm font-bold text-text mb-3">Payment Method</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setPaymentMethod('COD')}
+            className={`flex flex-col items-center gap-2 p-4 rounded-xl border text-center cursor-pointer transition-all ${
+              paymentMethod === 'COD'
+                ? 'border-emerald-500 bg-emerald-50 text-emerald-600 font-semibold'
+                : 'border-border/60 hover:bg-bg-secondary text-text-secondary'
+            }`}
+          >
+            <FiDollarSign className="w-5 h-5" />
+            <span className="text-xs">Cash on Delivery</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setPaymentMethod('Online')}
+            className={`flex flex-col items-center gap-2 p-4 rounded-xl border text-center cursor-pointer transition-all ${
+              paymentMethod === 'Online'
+                ? 'border-emerald-500 bg-emerald-50 text-emerald-600 font-semibold'
+                : 'border-border/60 hover:bg-bg-secondary text-text-secondary'
+            }`}
+          >
+            <FiCreditCard className="w-5 h-5" />
+            <span className="text-xs">Pay Online (Razorpay)</span>
+          </button>
         </div>
       </div>
 

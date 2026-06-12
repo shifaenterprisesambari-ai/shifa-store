@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiPackage, FiMapPin, FiPhone, FiCheck, FiTruck, FiNavigation, FiDollarSign, FiX, FiList 
@@ -7,6 +7,7 @@ import { deliveryService } from '../../services/deliveryService';
 import socketService from '../../services/socketService';
 import { useSelector } from 'react-redux';
 import { Spinner, EmptyState } from '../../components/ui/Loaders';
+import DeliveryMap from '../../components/delivery/DeliveryMap';
 import toast from 'react-hot-toast';
 
 const DeliveryDashboard = () => {
@@ -14,6 +15,18 @@ const DeliveryDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('available'); // Default to Available Offers
   const { user } = useSelector((s) => s.auth);
+  const [riderCoords, setRiderCoords] = useState(null);
+  const [expandedMaps, setExpandedMaps] = useState({});
+  const activeOrderIdRef = useRef(null);
+
+  const activeOrder = orders.find(o => ['acceptedByRider', 'pickedUp', 'outForDelivery'].includes(o.status));
+  useEffect(() => {
+    activeOrderIdRef.current = activeOrder?._id || null;
+  }, [orders]);
+
+  const toggleMap = (orderId) => {
+    setExpandedMaps(prev => ({ ...prev, [orderId]: !prev[orderId] }));
+  };
 
   useEffect(() => {
     load();
@@ -22,9 +35,14 @@ const DeliveryDashboard = () => {
       const watcher = navigator.geolocation.watchPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
-          deliveryService.updateLocation({ latitude, longitude }).catch(() => {});
-          // Also send via socket
-          socketService.sendLocationUpdate({ latitude, longitude });
+          setRiderCoords({ latitude, longitude });
+          
+          const orderId = activeOrderIdRef.current;
+          deliveryService.updateLocation({ latitude, longitude, orderId }).catch(() => {});
+          
+          const socketPayload = { latitude, longitude };
+          if (orderId) socketPayload.orderId = orderId;
+          socketService.sendLocationUpdate(socketPayload);
         },
         () => {},
         { enableHighAccuracy: true, maximumAge: 5000 }
@@ -209,6 +227,43 @@ const DeliveryDashboard = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Navigation Map Button & Panel */}
+                  {['acceptedByRider', 'pickedUp', 'outForDelivery'].includes(order.status) && order.deliveryPartner === user?._id && (
+                    <div className="mb-3 p-3 bg-bg-secondary/40 rounded-xl border border-border/20">
+                      <button
+                        type="button"
+                        onClick={() => toggleMap(order._id)}
+                        className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary-dark transition-colors cursor-pointer border-none bg-transparent outline-none"
+                      >
+                        <FiNavigation className="w-3.5 h-3.5 animate-pulse-soft text-primary" /> {expandedMaps[order._id] ? 'Hide Navigation Map' : 'Show Navigation Map'}
+                      </button>
+                      
+                      {expandedMaps[order._id] && (
+                        <div className="mt-3">
+                          <DeliveryMap
+                            riderLocation={riderCoords}
+                            destinationLocation={
+                              order.status === 'acceptedByRider'
+                                ? order.pickupLocation
+                                : order.deliveryLocation
+                            }
+                            destinationType={order.status === 'acceptedByRider' ? 'shop' : 'customer'}
+                            destinationName={
+                              order.status === 'acceptedByRider'
+                                ? (order.branch?.name || 'Store')
+                                : (order.customer?.name || 'Customer')
+                            }
+                            destinationAddress={
+                              order.status === 'acceptedByRider'
+                                ? (order.branch?.address || '')
+                                : (order.deliveryLocation?.address || '')
+                            }
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Detailed Items List - AMOUNT, DETAILS, etc. */}
                   <div className="mb-4 pt-3 border-t border-dashed border-border/40">

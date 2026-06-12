@@ -8,6 +8,7 @@ import { useForm } from 'react-hook-form';
 import { shopService } from '../../services/shopService';
 import { productService } from '../../services/productService';
 import { Spinner } from '../../components/ui/Loaders';
+import MapLocationPicker from '../../components/ui/MapLocationPicker';
 import toast from 'react-hot-toast';
 
 const ShopDashboard = () => {
@@ -31,6 +32,9 @@ const ShopDashboard = () => {
   const [shopName, setShopName] = useState('');
   const [shopAddress, setShopAddress] = useState('');
   const [shopImage, setShopImage] = useState('');
+  const [shopLat, setShopLat] = useState(null);
+  const [shopLng, setShopLng] = useState(null);
+  const [showMapPicker, setShowMapPicker] = useState(false);
 
   // Image Upload helpers
   const [productImageMode, setProductImageMode] = useState('upload'); // 'upload' or 'url'
@@ -61,6 +65,10 @@ const ShopDashboard = () => {
         setShopName(statsRes.data.branch.name || '');
         setShopAddress(statsRes.data.branch.address || '');
         setShopImage(statsRes.data.branch.image || '');
+        if (statsRes.data.branch.location) {
+          setShopLat(statsRes.data.branch.location.latitude);
+          setShopLng(statsRes.data.branch.location.longitude);
+        }
       }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -148,7 +156,9 @@ const ShopDashboard = () => {
       await shopService.updateSettings({
         name: shopName,
         address: shopAddress,
-        image: shopImage
+        image: shopImage,
+        latitude: shopLat,
+        longitude: shopLng
       });
       toast.success('Store settings updated successfully! 🎉');
       setShowSettings(false);
@@ -520,6 +530,22 @@ const ShopDashboard = () => {
                 <input required type="text" value={shopAddress} onChange={(e) => setShopAddress(e.target.value)} 
                   className="w-full px-3 py-2.5 bg-bg-secondary rounded-xl text-sm border border-transparent focus:border-primary/30 focus:bg-white focus:outline-none" />
               </div>
+
+              <div>
+                <label className="text-xs font-semibold text-text-secondary mb-1.5 block">Store Location Coordinates</label>
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1 px-3 py-2.5 bg-bg-secondary rounded-xl text-sm border border-transparent text-text-secondary font-medium">
+                    {shopLat && shopLng ? `📍 Pinned: ${shopLat.toFixed(6)}, ${shopLng.toFixed(6)}` : '❌ Location pin not set'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowMapPicker(true)}
+                    className="px-4 py-2.5 bg-primary/10 text-primary font-bold rounded-xl text-xs hover:bg-primary/20 transition-all cursor-pointer"
+                  >
+                    Change Pin
+                  </button>
+                </div>
+              </div>
               
               <div>
                 <label className="text-xs font-semibold text-text-secondary mb-1.5 block">Store Logo / Photograph</label>
@@ -585,6 +611,23 @@ const ShopDashboard = () => {
               </motion.button>
             </form>
           </motion.div>
+
+          {showMapPicker && (
+            <MapLocationPicker
+              title="Pin Store Location"
+              initialCoords={{
+                latitude: shopLat,
+                longitude: shopLng
+              }}
+              initialAddress={shopAddress}
+              onClose={() => setShowMapPicker(false)}
+              onSelect={(loc) => {
+                setShopLat(loc.latitude);
+                setShopLng(loc.longitude);
+                setShopAddress(loc.address);
+              }}
+            />
+          )}
         </div>
       )}
 

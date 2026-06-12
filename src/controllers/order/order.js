@@ -6,13 +6,20 @@ import { Customer, DeliveryPartner, ShopOwner } from "../../models/user.js";
 import { createNotification } from "../../services/notificationService.js";
 import { verifyOtp } from "../../services/otpService.js";
 import { syncParentOrderStatus } from "../../services/orderSyncService.js";
+import Razorpay from "razorpay";
+import crypto from "crypto";
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_placeholder_id",
+  key_secret: process.env.RAZORPAY_KEY_SECRET || "placeholder_secret",
+});
 
 
 export const createOrder = async(req,reply)=>{
     console.log("POST /order request received! Body:", req.body);
     try {
         const { userId, role } = req.user;
-        const { items, branch, totalPrice } = req.body;
+        const { items, branch, totalPrice, paymentMethod = "COD" } = req.body;
 
         // Only customers can place orders
         if (role && role !== "Customer") {
@@ -137,6 +144,8 @@ export const createOrder = async(req,reply)=>{
             count: resolved.count
         }));
 
+        const isOnline = paymentMethod === "Online";
+
         const parentOrder = new Order({
             customer: userId,
             items: parentMappedItems,
@@ -145,10 +154,12 @@ export const createOrder = async(req,reply)=>{
             status: "pending",
             isParent: true,
             parentOrder: null,
+            paymentMethod: isOnline ? "Online" : "COD",
+            paymentStatus: isOnline ? "unpaid" : "COD",
             deliveryLocation: {
-                latitude: customerData.liveLocation?.latitude || branchData?.location?.latitude || 26.100511,
-                longitude: customerData.liveLocation?.longitude || branchData?.location?.longitude || 90.41108,
-                address: customerData.address || "No address available",
+                latitude: req.body.deliveryLocation?.latitude || customerData.liveLocation?.latitude || branchData?.location?.latitude || 26.100511,
+                longitude: req.body.deliveryLocation?.longitude || customerData.liveLocation?.longitude || branchData?.location?.longitude || 90.41108,
+                address: req.body.deliveryLocation?.address || customerData.address || "No address available",
             },
             pickupLocation: {
                 latitude: branchData?.location?.latitude || 26.100511,
@@ -156,6 +167,17 @@ export const createOrder = async(req,reply)=>{
                 address: branchData?.address || "No address available",
             },
         });
+
+        let razorpayOrder = null;
+        if (isOnline) {
+            const options = {
+                amount: Math.round(totalPrice * 100), // in paise
+                currency: "INR",
+                receipt: `receipt_${parentOrder._id}`,
+            };
+            razorpayOrder = await razorpay.orders.create(options);
+            parentOrder.razorpayOrderId = razorpayOrder.id;
+        }
 
         let savedParentOrder = await parentOrder.save();
 
@@ -191,10 +213,13 @@ export const createOrder = async(req,reply)=>{
                 platformEarnings,
                 vendorPayout,
                 status: "pending",
+                paymentMethod: isOnline ? "Online" : "COD",
+                paymentStatus: isOnline ? "unpaid" : "COD",
+                razorpayOrderId: isOnline ? razorpayOrder.id : undefined,
                 deliveryLocation: {
-                    latitude: customerData.liveLocation?.latitude || branchData?.location?.latitude || 26.100511,
-                    longitude: customerData.liveLocation?.longitude || branchData?.location?.longitude || 90.41108,
-                    address: customerData.address || "No address available",
+                    latitude: req.body.deliveryLocation?.latitude || customerData.liveLocation?.latitude || branchData?.location?.latitude || 26.100511,
+                    longitude: req.body.deliveryLocation?.longitude || customerData.liveLocation?.longitude || branchData?.location?.longitude || 90.41108,
+                    address: req.body.deliveryLocation?.address || customerData.address || "No address available",
                 },
                 pickupLocation: {
                     latitude: branchData?.location?.latitude || 26.100511,
@@ -211,7 +236,7 @@ export const createOrder = async(req,reply)=>{
 
             createdOrders.push(savedChildOrder);
 
-            if (orderShopOwner) {
+            if (!isOnline && orderShopOwner) {
                 const itemDetailsText = savedChildOrder.items
                     .map(it => `${it.item?.name || "Product"} (x${it.count})`)
                     .join(", ");
@@ -228,22 +253,36 @@ export const createOrder = async(req,reply)=>{
             }
         }
 
-        if (io) {
-            io.to(savedParentOrder._id.toString()).emit("order-created", {
+        if (!isOnline) {
+            if (io) {
+                io.to(savedParentOrder._id.toString()).emit("order-created", {
+                    orderId: savedParentOrder._id,
+                    status: "pending",
+                });
+            }
+
+            await createNotification({
+                recipient: userId,
+                recipientModel: "Customer",
+                title: "Order Placed",
+                message: `Your order ${savedParentOrder.orderId} has been placed successfully.`,
+                type: "order_placed",
                 orderId: savedParentOrder._id,
-                status: "pending",
+                io,
             });
         }
 
-        await createNotification({
-            recipient: userId,
-            recipientModel: "Customer",
-            title: "Order Placed",
-            message: `Your order ${savedParentOrder.orderId} has been placed successfully.`,
-            type: "order_placed",
-            orderId: savedParentOrder._id,
-            io,
-        });
+        if (isOnline) {
+            return reply.status(201).send({
+                order: savedParentOrder,
+                razorpayOrder: {
+                    id: razorpayOrder.id,
+                    amount: razorpayOrder.amount,
+                    currency: razorpayOrder.currency,
+                    key: process.env.RAZORPAY_KEY_ID,
+                }
+            });
+        }
 
         return reply.status(201).send(savedParentOrder);
  
@@ -339,7 +378,9 @@ export const updateOrderStatus=async(req,reply)=>{
 export const getOrders = async (req, reply) => {
     try {
       const { status, customerId, deliveryPartnerId, branchId } = req.query;
-      let query = {};
+      let query = {
+        paymentStatus: { $ne: "unpaid" }
+      };
   
       if (status) {
         query.status = status;
@@ -403,7 +444,15 @@ export const getOrderById = async (req, reply) => {
   
       const orderObj = order.toObject();
       if (order.isParent) {
-        const children = await Order.find({ parentOrder: order._id });
+        const children = await Order.find({ parentOrder: order._id })
+          .populate("customer branch deliveryPartner")
+          .populate({
+            path: "items.item",
+            populate: {
+              path: "shop",
+              select: "shopName shopAddress email phone"
+            }
+          });
         orderObj.childOrders = children;
       }
 
@@ -446,5 +495,118 @@ export const verifyDeliveryOtp = async (req, reply) => {
       return reply
         .status(500)
         .send({ message: "Failed to verify OTP", error });
+    }
+};
+
+export const verifyPayment = async (req, reply) => {
+    try {
+        const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
+        const { userId } = req.user;
+
+        if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+            return reply.status(400).send({ message: "Missing required payment fields" });
+        }
+
+        // Verify signature
+        const secret = process.env.RAZORPAY_KEY_SECRET || "placeholder_secret";
+        const generatedSignature = crypto
+            .createHmac("sha256", secret)
+            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+            .digest("hex");
+
+        if (generatedSignature !== razorpay_signature) {
+            // Find parent order and mark as failed
+            await Order.updateMany(
+                { razorpayOrderId: razorpay_order_id },
+                { $set: { paymentStatus: "failed" } }
+            );
+            return reply.status(400).send({ message: "Invalid payment signature" });
+        }
+
+        // Payment successful!
+        // Find parent order
+        const parentOrder = await Order.findOne({ razorpayOrderId: razorpay_order_id, isParent: true });
+        if (!parentOrder) {
+            return reply.status(404).send({ message: "Order not found" });
+        }
+
+        if (parentOrder.paymentStatus === "paid") {
+            // Already verified and processed
+            return reply.send({ message: "Payment already verified", order: parentOrder });
+        }
+
+        // Update parent order
+        parentOrder.paymentStatus = "paid";
+        parentOrder.razorpayPaymentId = razorpay_payment_id;
+        parentOrder.razorpaySignature = razorpay_signature;
+        await parentOrder.save();
+
+        // Update child orders
+        const childOrders = await Order.find({ parentOrder: parentOrder._id });
+        for (const child of childOrders) {
+            child.paymentStatus = "paid";
+            child.razorpayPaymentId = razorpay_payment_id;
+            child.razorpaySignature = razorpay_signature;
+            await child.save();
+        }
+
+        // Now trigger the notification and socket flows
+        const io = req.server.io;
+
+        // 1. Notify shop owners of child orders
+        for (const child of childOrders) {
+            if (child.shopOwner) {
+                // Populate product items to generate notification message
+                const populatedChild = await Order.findById(child._id).populate("items.item");
+                const itemDetailsText = populatedChild.items
+                    .map(it => `${it.item?.name || "Product"} (x${it.count})`)
+                    .join(", ");
+
+                await createNotification({
+                    recipient: child.shopOwner,
+                    recipientModel: "ShopOwner",
+                    title: "New Order",
+                    message: `New order ${child.orderId} containing: ${itemDetailsText} has been placed.`,
+                    type: "order_placed",
+                    orderId: child._id,
+                    io,
+                });
+            }
+        }
+
+        // 2. Emit socket events to order room
+        if (io) {
+            io.to(parentOrder._id.toString()).emit("order-created", {
+                orderId: parentOrder._id,
+                status: "pending",
+            });
+        }
+
+        // 3. Notify customer
+        await createNotification({
+            recipient: userId,
+            recipientModel: "Customer",
+            title: "Order Placed",
+            message: `Your order ${parentOrder.orderId} has been placed successfully.`,
+            type: "order_placed",
+            orderId: parentOrder._id,
+            io,
+        });
+
+        // Populate parent order for response
+        const populatedParent = await Order.findById(parentOrder._id)
+            .populate("customer branch deliveryPartner")
+            .populate({
+                path: "items.item",
+            });
+
+        return reply.send({
+            message: "Payment verified successfully",
+            order: populatedParent,
+        });
+
+    } catch (error) {
+        console.error("Payment verification failed:", error);
+        return reply.status(500).send({ message: "Failed to verify payment", error });
     }
 };

@@ -20,7 +20,7 @@ export const getShopOrders = async (req, reply) => {
 
     // Query only this specific shop owner's orders — do NOT include the shared
     // branch condition, which would leak other owners' orders to each other.
-    const query = { shopOwner: { $in: possibleIds } };
+    const query = { shopOwner: { $in: possibleIds }, paymentStatus: { $ne: "unpaid" } };
     if (status) query.status = status;
 
     const orders = await Order.find(query)
