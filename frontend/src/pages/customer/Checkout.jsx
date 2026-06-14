@@ -107,7 +107,7 @@ const Checkout = () => {
         }
 
         const options = {
-          key: data.razorpayOrder.key,
+          key: data.razorpayOrder.key || import.meta.env.VITE_RAZORPAY_KEY_ID,
           amount: data.razorpayOrder.amount,
           currency: data.razorpayOrder.currency,
           name: 'Shifa Store',
@@ -149,6 +149,11 @@ const Checkout = () => {
         };
 
         const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response) {
+          toast.error(response.error.description || 'Payment failed');
+          console.error('Payment failed details:', response.error);
+          setLoading(false);
+        });
         rzp.open();
       } else {
         dispatch(clearCart());
