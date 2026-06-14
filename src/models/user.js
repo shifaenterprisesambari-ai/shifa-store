@@ -35,6 +35,8 @@ const customerSchema = new mongoose.Schema({
       longitude: { type: Number },
       isDefault: { type: Boolean, default: false },
     }],
+    resetPasswordOtp: { type: String },
+    resetPasswordOtpExpires: { type: Date },
 })
 
 // Delivery Partner Schema

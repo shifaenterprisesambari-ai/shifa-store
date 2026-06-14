@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
-import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiMail, FiLock, FiEye, FiEyeOff, FiX, FiKey } from 'react-icons/fi';
 import { authService } from '../../services/authService';
 import { loginSuccess } from '../../store/authSlice';
 import toast from 'react-hot-toast';
@@ -15,6 +15,57 @@ const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors } } = useForm();
+
+  // Forgot Password States
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [showForgotPwd, setShowForgotPwd] = useState(false);
+
+  const handleForgotPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      toast.error('Please enter your email');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const response = await authService.forgotPassword(forgotEmail);
+      toast.success(response.data?.message || 'Verification OTP sent successfully!');
+      console.log('Forgot Password OTP:', response.data?.otp);
+      setForgotStep(2);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send OTP');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotOtp || !forgotNewPassword) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const response = await authService.resetPassword(forgotEmail, forgotOtp, forgotNewPassword);
+      toast.success(response.data?.message || 'Password reset successful!');
+      setShowForgotModal(false);
+      // Reset state
+      setForgotStep(1);
+      setForgotEmail('');
+      setForgotOtp('');
+      setForgotNewPassword('');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reset password');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const onSubmit = async (values) => {
     setLoading(true);
@@ -92,7 +143,24 @@ const Login = () => {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-text-secondary mb-1.5 block">Password</label>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-sm font-medium text-text-secondary">Password</label>
+                {loginType === 'customer' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotEmail('');
+                      setForgotOtp('');
+                      setForgotNewPassword('');
+                      setForgotStep(1);
+                      setShowForgotModal(true);
+                    }}
+                    className="text-xs font-semibold text-primary hover:underline transition-all cursor-pointer focus:outline-none"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <FiLock className="absolute left-4.5 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4 pointer-events-none z-10" />
                 <input {...register('password', { required: 'Password is required' })}
@@ -134,6 +202,144 @@ const Login = () => {
           )}
         </motion.div>
       </div>
+
+      <AnimatePresence>
+        {showForgotModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md"
+          >
+            {/* Modal Backdrop click to close */}
+            <div
+              className="absolute inset-0 cursor-default"
+              onClick={() => setShowForgotModal(false)}
+            />
+
+            {/* Modal Card */}
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              transition={{ type: 'spring', duration: 0.4 }}
+              className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-border/40 z-10 p-8"
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(false)}
+                className="absolute top-4 right-4 text-text-secondary hover:text-text p-1.5 rounded-lg hover:bg-bg-secondary transition-all cursor-pointer focus:outline-none"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-text">Reset Password</h3>
+                <p className="text-text-secondary text-sm mt-1">
+                  {forgotStep === 1
+                    ? 'Enter your email to receive a verification OTP.'
+                    : 'Enter the verification OTP and your new password.'}
+                </p>
+              </div>
+
+              {forgotStep === 1 ? (
+                <form onSubmit={handleForgotPasswordSubmit} className="space-y-5">
+                  <div>
+                    <label className="text-sm font-medium text-text-secondary mb-1.5 block">Email Address</label>
+                    <div className="relative">
+                      <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4" />
+                      <input
+                        type="email"
+                        required
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="yourname@example.com"
+                        className="w-full pl-11 pr-4 py-3 bg-bg-secondary rounded-xl text-sm border border-transparent focus:border-primary/30 focus:bg-white focus:outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="w-full py-3.5 gradient-primary text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-primary/25 transition-all disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {forgotLoading ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      'Send Verification Code'
+                    )}
+                  </motion.button>
+                </form>
+              ) : (
+                <form onSubmit={handleResetPasswordSubmit} className="space-y-5">
+                  <div>
+                    <label className="text-sm font-medium text-text-secondary mb-1.5 block">Verification OTP Code</label>
+                    <div className="relative">
+                      <FiKey className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4" />
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        value={forgotOtp}
+                        onChange={(e) => setForgotOtp(e.target.value)}
+                        placeholder="Enter 6-digit OTP"
+                        className="w-full pl-11 pr-4 py-3 bg-bg-secondary rounded-xl text-sm border border-transparent focus:border-primary/30 focus:bg-white focus:outline-none transition-all tracking-widest text-center font-bold text-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-text-secondary mb-1.5 block">New Password</label>
+                    <div className="relative">
+                      <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4" />
+                      <input
+                        type={showForgotPwd ? 'text' : 'password'}
+                        required
+                        value={forgotNewPassword}
+                        onChange={(e) => setForgotNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        className="w-full pl-11 pr-10 py-3 bg-bg-secondary rounded-xl text-sm border border-transparent focus:border-primary/30 focus:bg-white focus:outline-none transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotPwd(!showForgotPwd)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text cursor-pointer focus:outline-none"
+                      >
+                        {showForgotPwd ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setForgotStep(1)}
+                      className="flex-1 py-3.5 border border-border rounded-xl text-sm font-semibold text-text-secondary hover:bg-bg-secondary transition-colors cursor-pointer focus:outline-none"
+                    >
+                      Back
+                    </button>
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      type="submit"
+                      disabled={forgotLoading}
+                      className="flex-1 py-3.5 gradient-primary text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-primary/25 transition-all disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {forgotLoading ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        'Reset Password'
+                      )}
+                    </motion.button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

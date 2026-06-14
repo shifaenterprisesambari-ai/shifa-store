@@ -7,6 +7,8 @@ import {
     loginCustomerEmail,
     loginGoogleCustomer,
     loginShopOwner,
+    forgotPassword,
+    resetPassword,
   } from "../controllers/auth/auth.js";
 import { updateUser } from "../controllers/tracking/user.js";
 import { verifyToken } from "../middleware/auth.js";
@@ -58,6 +60,8 @@ export const authRoutes = async (fastify, options) => {
       loginCustomerEmail
     );
     fastify.post("/customer/login/google", loginGoogleCustomer);
+    fastify.post("/customer/forgot-password", forgotPassword);
+    fastify.post("/customer/reset-password", resetPassword);
 
     // New shop owner auth route
     fastify.post(

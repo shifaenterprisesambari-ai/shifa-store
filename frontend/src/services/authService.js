@@ -27,4 +27,8 @@ export const authService = {
 
   // Update user profile
   updateUser: (data) => api.patch('/user', data),
+
+  // Forgot Password & Reset Password
+  forgotPassword: (email) => api.post('/customer/forgot-password', { email }),
+  resetPassword: (email, otp, newPassword) => api.post('/customer/reset-password', { email, otp, newPassword }),
 };

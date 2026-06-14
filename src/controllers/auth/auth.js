@@ -381,3 +381,81 @@ export const fetchUser = async (req, reply) => {
     return reply.status(500).send({ message: "An error occurred", error });
   }
 };
+
+// ==========================================
+// NEW: Customer Forgot Password OTP request
+// ==========================================
+export const forgotPassword = async (req, reply) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return reply.status(400).send({ message: "Email is required" });
+    }
+
+    const customer = await Customer.findOne({ email });
+    if (!customer) {
+      return reply.status(404).send({ message: "No customer account found with this email" });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    customer.resetPasswordOtp = otp;
+    customer.resetPasswordOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes from now
+    await customer.save();
+
+    // Log the OTP to backend console for easy local testing/verification
+    console.log(`\n==========================================`);
+    console.log(`[Forgot Password] OTP for ${email}: ${otp}`);
+    console.log(`==========================================\n`);
+
+    return reply.send({
+      message: "Reset OTP sent to your registered email address.",
+      otp, // return OTP in response for easy client testing
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return reply.status(500).send({ message: "An error occurred", error });
+  }
+};
+
+// ==========================================
+// NEW: Customer Reset Password verification
+// ==========================================
+export const resetPassword = async (req, reply) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      return reply.status(400).send({ message: "All fields are required" });
+    }
+
+    const customer = await Customer.findOne({ email });
+    if (!customer) {
+      return reply.status(404).send({ message: "No customer account found with this email" });
+    }
+
+    if (!customer.resetPasswordOtp || customer.resetPasswordOtp !== otp) {
+      return reply.status(400).send({ message: "Invalid verification code" });
+    }
+
+    if (customer.resetPasswordOtpExpires < Date.now()) {
+      return reply.status(400).send({ message: "Verification code has expired" });
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    customer.password = hashedPassword;
+    customer.plainPassword = newPassword;
+    customer.resetPasswordOtp = undefined;
+    customer.resetPasswordOtpExpires = undefined;
+    await customer.save();
+
+    return reply.send({
+      message: "Password reset successful! You can now log in with your new password.",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    return reply.status(500).send({ message: "An error occurred", error });
+  }
+};
