@@ -7,7 +7,6 @@ import { deliveryService } from '../../services/deliveryService';
 import socketService from '../../services/socketService';
 import { useSelector } from 'react-redux';
 import { Spinner, EmptyState } from '../../components/ui/Loaders';
-import DeliveryMap from '../../components/delivery/DeliveryMap';
 import toast from 'react-hot-toast';
 
 const DeliveryDashboard = () => {
@@ -16,16 +15,40 @@ const DeliveryDashboard = () => {
   const [tab, setTab] = useState('available'); // Default to Available Offers
   const { user } = useSelector((s) => s.auth);
   const [riderCoords, setRiderCoords] = useState(null);
-  const [expandedMaps, setExpandedMaps] = useState({});
   const activeOrderIdRef = useRef(null);
+  const [processing, setProcessing] = useState({});
+  const [modalConfig, setModalConfig] = useState(null);
 
   const activeOrder = orders.find(o => ['acceptedByRider', 'pickedUp', 'outForDelivery'].includes(o.status));
   useEffect(() => {
     activeOrderIdRef.current = activeOrder?._id || null;
   }, [orders]);
 
-  const toggleMap = (orderId) => {
-    setExpandedMaps(prev => ({ ...prev, [orderId]: !prev[orderId] }));
+  const handleOpenGoogleMaps = (order) => {
+    const isPickup = order.status === 'acceptedByRider';
+    const dest = isPickup ? order.pickupLocation : order.deliveryLocation;
+    const destLat = dest?.latitude || dest?.lat;
+    const destLng = dest?.longitude || dest?.lng;
+    const destAddress = dest?.address || '';
+
+    let destinationParam = '';
+    if (destLat && destLng) {
+      destinationParam = `${destLat},${destLng}`;
+    } else if (destAddress) {
+      destinationParam = encodeURIComponent(destAddress);
+    } else if (isPickup && order.branch) {
+      const branchLat = order.branch.location?.latitude || order.branch.location?.lat;
+      const branchLng = order.branch.location?.longitude || order.branch.location?.lng;
+      if (branchLat && branchLng) {
+        destinationParam = `${branchLat},${branchLng}`;
+      } else if (order.branch.address) {
+        destinationParam = encodeURIComponent(order.branch.address);
+      }
+    }
+
+    const originParam = riderCoords ? `${riderCoords.latitude},${riderCoords.longitude}` : '';
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destinationParam}&travelmode=driving`;
+    window.open(url, '_blank');
   };
 
   useEffect(() => {
@@ -67,6 +90,35 @@ const DeliveryDashboard = () => {
   };
 
   const handleAction = async (orderId, action, data = {}) => {
+    if (action === 'cancel') {
+      setModalConfig({
+        type: 'cancel',
+        orderId,
+        title: 'Cancel Delivery Assignment',
+        message: 'Are you sure you want to cancel this delivery assignment? The order will be released back to the available queue.',
+        onConfirm: () => executeAction(orderId, action)
+      });
+      return;
+    }
+
+    if (action === 'complete') {
+      setModalConfig({
+        type: 'otp',
+        orderId,
+        title: 'Verify Delivery OTP',
+        message: 'Please ask the customer for the delivery verification OTP and enter it below to complete this job.',
+        placeholder: 'Enter 4-digit OTP',
+        onConfirm: (otp) => executeAction(orderId, action, { otp })
+      });
+      return;
+    }
+
+    // Direct actions (accept, pickup, start)
+    executeAction(orderId, action, data);
+  };
+
+  const executeAction = async (orderId, action, data = {}) => {
+    setProcessing(prev => ({ ...prev, [orderId]: true }));
     try {
       if (action === 'accept') {
         await deliveryService.acceptDelivery(orderId, data);
@@ -78,12 +130,9 @@ const DeliveryDashboard = () => {
         await deliveryService.startDelivery(orderId);
         toast.success('Out for delivery! 🗺️');
       } else if (action === 'complete') {
-        const otp = prompt('Enter delivery OTP provided by the customer:');
-        if (!otp) return;
-        await deliveryService.completeDelivery(orderId, { otp });
+        await deliveryService.completeDelivery(orderId, data);
         toast.success('Order delivered successfully! 🎉');
       } else if (action === 'cancel') {
-        if (!confirm('Are you sure you want to cancel this delivery assignment? The order will be released back to the available queue.')) return;
         await deliveryService.cancelDelivery(orderId);
         toast.success('Delivery assignment cancelled and released');
       }
@@ -98,6 +147,8 @@ const DeliveryDashboard = () => {
       } else {
         toast.error(msg || 'Action failed. Please try again.');
       }
+    } finally {
+      setProcessing(prev => ({ ...prev, [orderId]: false }));
     }
   };
 
@@ -228,40 +279,19 @@ const DeliveryDashboard = () => {
                     )}
                   </div>
 
-                  {/* Navigation Map Button & Panel */}
+                  {/* Google Maps Direct Navigation Button */}
                   {['acceptedByRider', 'pickedUp', 'outForDelivery'].includes(order.status) && order.deliveryPartner === user?._id && (
-                    <div className="mb-3 p-3 bg-bg-secondary/40 rounded-xl border border-border/20">
+                    <div className="mb-3">
                       <button
                         type="button"
-                        onClick={() => toggleMap(order._id)}
-                        className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary-dark transition-colors cursor-pointer border-none bg-transparent outline-none"
+                        onClick={() => handleOpenGoogleMaps(order)}
+                        className="w-full py-3 bg-primary/10 border border-primary/20 hover:bg-primary/25 text-primary hover:text-primary-dark text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm"
                       >
-                        <FiNavigation className="w-3.5 h-3.5 animate-pulse-soft text-primary" /> {expandedMaps[order._id] ? 'Hide Navigation Map' : 'Show Navigation Map'}
+                        <FiNavigation className="w-4 h-4 animate-pulse text-primary" />
+                        {order.status === 'acceptedByRider' 
+                          ? 'Navigate to Store (Google Maps) 🏪' 
+                          : 'Navigate to Customer (Google Maps) 🏠'}
                       </button>
-                      
-                      {expandedMaps[order._id] && (
-                        <div className="mt-3">
-                          <DeliveryMap
-                            riderLocation={riderCoords}
-                            destinationLocation={
-                              order.status === 'acceptedByRider'
-                                ? order.pickupLocation
-                                : order.deliveryLocation
-                            }
-                            destinationType={order.status === 'acceptedByRider' ? 'shop' : 'customer'}
-                            destinationName={
-                              order.status === 'acceptedByRider'
-                                ? (order.branch?.name || 'Store')
-                                : (order.customer?.name || 'Customer')
-                            }
-                            destinationAddress={
-                              order.status === 'acceptedByRider'
-                                ? (order.branch?.address || '')
-                                : (order.deliveryLocation?.address || '')
-                            }
-                          />
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -335,9 +365,16 @@ const DeliveryDashboard = () => {
                       <motion.button 
                         whileTap={{ scale: 0.95 }} 
                         onClick={() => handleAction(order._id, actionBtn.action)}
-                        className={`flex-grow py-2.5 ${actionBtn.color} text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-sm`}
+                        disabled={processing[order._id]}
+                        className={`flex-grow py-2.5 ${actionBtn.color} text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-60 transition-all`}
                       >
-                        <actionBtn.icon className="w-4 h-4" /> {actionBtn.label}
+                        {processing[order._id] && !modalConfig ? (
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <actionBtn.icon className="w-4 h-4" /> {actionBtn.label}
+                          </>
+                        )}
                       </motion.button>
                     )}
 
@@ -346,7 +383,8 @@ const DeliveryDashboard = () => {
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => handleAction(order._id, 'cancel')}
-                        className="px-4 py-2.5 bg-error hover:bg-error-dark text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-colors"
+                        disabled={processing[order._id]}
+                        className="px-4 py-2.5 bg-error hover:bg-error-dark text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-colors disabled:opacity-60"
                         title="Release this delivery assignment"
                       >
                         <FiX className="w-4 h-4" /> Cancel Delivery
@@ -359,6 +397,81 @@ const DeliveryDashboard = () => {
           </AnimatePresence>
         </div>
       )}
+
+      {/* GORGEOUS GLASSMORPHISM MODAL DIALOG */}
+      <AnimatePresence>
+        {modalConfig && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-white rounded-2xl border border-border/30 p-6 max-w-sm w-full shadow-2xl relative overflow-hidden"
+            >
+              <h3 className="text-base font-black text-text mb-2 flex items-center gap-2">
+                {modalConfig.type === 'otp' ? '🔑' : '⚠️'} {modalConfig.title}
+              </h3>
+              <p className="text-xs text-text-secondary mb-4 leading-relaxed font-semibold">
+                {modalConfig.message}
+              </p>
+              
+              {modalConfig.type === 'otp' && (
+                <input
+                  type="text"
+                  placeholder={modalConfig.placeholder || "Enter 4-digit OTP"}
+                  autoFocus
+                  id="custom-otp-input"
+                  className="w-full px-4 py-3 bg-bg-secondary rounded-xl text-center text-lg font-black tracking-widest border border-transparent focus:border-primary/30 focus:bg-white focus:outline-none mb-4 transition-all"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const val = e.target.value;
+                      if (val.trim()) {
+                        modalConfig.onConfirm(val.trim());
+                        setModalConfig(null);
+                      }
+                    }
+                  }}
+                />
+              )}
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setModalConfig(null)}
+                  className="px-4 py-2.5 bg-bg-secondary hover:bg-bg-tertiary text-text-secondary text-xs font-bold rounded-xl transition-all cursor-pointer border-none outline-none"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (modalConfig.type === 'otp') {
+                      const input = document.getElementById('custom-otp-input');
+                      if (input && input.value.trim()) {
+                        modalConfig.onConfirm(input.value.trim());
+                        setModalConfig(null);
+                      }
+                    } else {
+                      modalConfig.onConfirm();
+                      setModalConfig(null);
+                    }
+                  }}
+                  className={`px-5 py-2.5 text-white text-xs font-bold rounded-xl transition-all cursor-pointer border-none outline-none shadow-sm ${
+                    modalConfig.type === 'otp' ? 'bg-success hover:bg-success-dark' : 'bg-error hover:bg-error-dark'
+                  }`}
+                >
+                  Confirm
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
