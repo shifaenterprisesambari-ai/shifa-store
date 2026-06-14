@@ -2,6 +2,10 @@ import { Customer, DeliveryPartner, ShopOwner } from "../../models/user.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { OAuth2Client } from "google-auth-library";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -394,7 +398,10 @@ export const forgotPassword = async (req, reply) => {
 
     const customer = await Customer.findOne({ email });
     if (!customer) {
-      return reply.status(404).send({ message: "No customer account found with this email" });
+      // Return a generic message for security (don't reveal if email exists)
+      return reply.send({
+        message: "If an account with this email exists, you will receive a reset OTP.",
+      });
     }
 
     // Generate 6-digit OTP
@@ -403,20 +410,74 @@ export const forgotPassword = async (req, reply) => {
     customer.resetPasswordOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes from now
     await customer.save();
 
-    // Log the OTP to backend console for easy local testing/verification
+    // Always log to console for debugging
     console.log(`\n==========================================`);
     console.log(`[Forgot Password] OTP for ${email}: ${otp}`);
     console.log(`==========================================\n`);
 
+    // Send email via Resend
+    // ⚠️  FREE TIER NOTE: Without a verified domain, Resend only allows sending
+    //     to the email you registered with (set RESEND_TEST_TO_EMAIL in .env).
+    //     To send to ANY email: verify your domain at https://resend.com/domains
+    //     then set RESEND_FROM_EMAIL=noreply@yourdomain.com and remove RESEND_TEST_TO_EMAIL.
+    const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+    const toEmail = process.env.RESEND_TEST_TO_EMAIL || email; // Override recipient for testing
+    const { error: emailError } = await resend.emails.send({
+      from: `Shifa Store <${fromEmail}>`,
+      to: toEmail,
+      subject: "Your Shifa Store Password Reset OTP",
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #FF7A00 0%, #FFC400 100%); padding: 36px 32px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">🛒 Shifa Store</h1>
+            <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">Fresh groceries at your doorstep</p>
+          </div>
+
+          <!-- Body -->
+          <div style="padding: 40px 32px;">
+            <h2 style="color: #1A1A1A; margin: 0 0 12px; font-size: 22px; font-weight: 700;">Password Reset Request</h2>
+            <p style="color: #6B7280; font-size: 15px; line-height: 1.6; margin: 0 0 28px;">
+              Hi ${customer.name || "there"},<br/><br/>
+              We received a request to reset your password. Use the verification code below. It expires in <strong>10 minutes</strong>.
+            </p>
+
+            <!-- OTP Box -->
+            <div style="background: #FFF7ED; border: 2px solid #FF7A00; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 28px;">
+              <p style="color: #6B7280; font-size: 13px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Your OTP Code</p>
+              <p style="color: #FF7A00; font-size: 42px; font-weight: 800; letter-spacing: 10px; margin: 0; font-family: 'Courier New', monospace;">${otp}</p>
+            </div>
+
+            <p style="color: #9CA3AF; font-size: 13px; line-height: 1.6; margin: 0;">
+              If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div style="background: #F8F9FA; padding: 20px 32px; text-align: center; border-top: 1px solid #E5E7EB;">
+            <p style="color: #9CA3AF; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} Shifa Store. All rights reserved.</p>
+          </div>
+        </div>
+      `,
+    });
+
+    if (emailError) {
+      console.error("[Resend] Email send error:", emailError);
+      // Graceful fallback — OTP is always in console logs
+      return reply.send({
+        message: "Reset OTP generated. Check server console if email did not arrive.",
+      });
+    }
+
     return reply.send({
-      message: "Reset OTP sent to your registered email address.",
-      otp, // return OTP in response for easy client testing
+      message: "A verification OTP has been sent to your email address. Please check your inbox.",
     });
   } catch (error) {
     console.error("Forgot password error:", error);
     return reply.status(500).send({ message: "An error occurred", error });
   }
 };
+
 
 // ==========================================
 // NEW: Customer Reset Password verification
