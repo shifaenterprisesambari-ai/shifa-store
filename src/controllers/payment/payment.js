@@ -5,8 +5,8 @@ import { createNotification } from "../../services/notificationService.js";
 
 const getRazorpayInstance = () => {
   return new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_T1T1io3iRegTeX",
-    key_secret: process.env.RAZORPAY_KEY_SECRET || "b34mLPjqj4zG8ufLsxqm8CYB",
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
   });
 };
 
@@ -64,7 +64,7 @@ export const verifyRazorpayPayment = async (req, reply) => {
       return reply.status(400).send({ message: "Missing required payment fields" });
     }
 
-    const secret = process.env.RAZORPAY_KEY_SECRET || "b34mLPjqj4zG8ufLsxqm8CYB";
+    const secret = process.env.RAZORPAY_KEY_SECRET;
     const generatedSignature = crypto
       .createHmac("sha256", secret)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
