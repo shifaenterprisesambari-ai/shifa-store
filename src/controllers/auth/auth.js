@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { OAuth2Client } from "google-auth-library";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -420,6 +420,13 @@ export const forgotPassword = async (req, reply) => {
     //     to the email you registered with (set RESEND_TEST_TO_EMAIL in .env).
     //     To send to ANY email: verify your domain at https://resend.com/domains
     //     then set RESEND_FROM_EMAIL=noreply@yourdomain.com and remove RESEND_TEST_TO_EMAIL.
+    if (!resend) {
+      console.warn("[Resend] Resend API key is not set. Email cannot be sent.");
+      return reply.send({
+        message: "Reset OTP generated. Check server console since email service is not configured.",
+      });
+    }
+
     const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
     const toEmail = process.env.RESEND_TEST_TO_EMAIL || email; // Override recipient for testing
     const { error: emailError } = await resend.emails.send({
