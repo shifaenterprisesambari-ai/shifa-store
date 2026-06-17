@@ -11,6 +11,9 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@adminjs/fastify": "^4.2.0",
     "@adminjs/mongoose": "^4.1.0",
