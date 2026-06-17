@@ -4,7 +4,6 @@ import { FiSearch } from 'react-icons/fi';
 import { productService } from '../../services/productService';
 import ProductCard from '../../components/ProductCard';
 import { SkeletonList, EmptyState } from '../../components/ui/Loaders';
-import { DEMO_PRODUCTS } from '../../constants';
 
 /* Client-side search — no backend search API exists */
 const Search = () => {
@@ -21,8 +20,8 @@ const Search = () => {
         await Promise.all(cats.map(async (cat) => {
           try { const { data } = await productService.getProductsByCategory(cat._id); all.push(...data.map((p) => ({ ...p, categoryName: cat.name }))); } catch {}
         }));
-        setAllProducts(all.length > 0 ? all : DEMO_PRODUCTS.map((p, i) => ({ ...p, _id: `demo-${i}` })));
-      } catch { setAllProducts(DEMO_PRODUCTS.map((p, i) => ({ ...p, _id: `demo-${i}` }))); }
+        setAllProducts(all);
+      } catch { setAllProducts([]); }
       finally { setLoading(false); }
     };
     load();

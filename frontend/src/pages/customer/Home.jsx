@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { productService } from '../../services/productService';
 import ProductCard from '../../components/ProductCard';
 import { Spinner, SkeletonList, SkeletonCategoryRow } from '../../components/ui/Loaders';
-import { HERO_BANNERS, DEMO_PRODUCTS, DEMO_SHOPS, FLASH_SALE_ITEMS } from '../../constants';
+import { HERO_BANNERS, DEMO_SHOPS } from '../../constants';
 
 const Home = () => {
   const [categories, setCategories] = useState([]);
@@ -222,7 +222,7 @@ const Home = () => {
         <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide py-1">
           {[
             { icon: <FiZap className="w-4 h-4 text-primary" />, text: '10 Min Delivery' },
-            { icon: <FiTruck className="w-4 h-4 text-success" />, text: 'Free above ₹199' },
+            { icon: <FiTruck className="w-4 h-4 text-success" />, text: 'Free above ₹499' },
             { icon: <FiClock className="w-4 h-4 text-info" />, text: 'Best Prices' },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-2 px-4 py-2 bg-bg-secondary rounded-xl text-xs font-medium text-text-secondary whitespace-nowrap shrink-0">
@@ -261,18 +261,19 @@ const Home = () => {
 
       <div className="h-14 sm:h-20 w-full" />
       {/* Deals - Premium Improved Section */}
-      <section className="px-2.5 sm:px-4">
-        <div className="bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent px-3.5 py-5 sm:p-5 rounded-2xl sm:rounded-3xl border border-orange-100/50">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2.5">
-              <h2 className="text-lg font-black text-text tracking-tight">
-                Deals
-              </h2>
+      {!loading && allProducts.length > 0 && (
+        <section className="px-2.5 sm:px-4">
+          <div className="bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent px-3.5 py-5 sm:p-5 rounded-2xl sm:rounded-3xl border border-orange-100/50">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <h2 className="text-lg font-black text-text tracking-tight">
+                  Deals
+                </h2>
+              </div>
             </div>
-          </div>
 
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
-            {(allProducts.length > 0 ? allProducts : FLASH_SALE_ITEMS).map((item, i) => {
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+              {allProducts.map((item, i) => {
               const soldPercent = [78, 45, 88, 62][i % 4];
               const salePrice = item.price;
               const originalPrice = item.discountPrice || item.originalPrice || Math.round(item.price * 1.25);
@@ -352,6 +353,7 @@ const Home = () => {
           </div>
         </div>
       </section>
+      )}
 
       {/* Products by Category */}
       {loading ? (
@@ -451,7 +453,7 @@ const Home = () => {
       </section>
 
       {/* Trending Products */}
-      {!loading && (
+      {!loading && allProducts.length > 0 && (
         <>
           <div className="h-14 sm:h-20 w-full" />
           <section className="px-2.5 sm:px-4">
@@ -460,7 +462,7 @@ const Home = () => {
             <p className="text-[10px] text-text-tertiary font-semibold mt-0.5">Top picks by local shoppers</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-            {(allProducts.length > 0 ? allProducts : DEMO_PRODUCTS).slice(0, 10).map((p, i) => (
+            {allProducts.slice(0, 10).map((p, i) => (
               <div key={p._id || i} className="w-full flex flex-col">
                 <ProductCard product={p} index={i} />
               </div>

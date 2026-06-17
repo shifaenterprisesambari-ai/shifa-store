@@ -12,7 +12,7 @@ const Cart = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const deliveryFee = total > 199 ? 0 : 25;
+  const deliveryFee = total > 499 ? 0 : 25;
   const grandTotal = total + deliveryFee;
 
   if (items.length === 0) {
@@ -72,7 +72,7 @@ const Cart = () => {
               <hr className="border-border/50" />
               <div className="flex justify-between text-base font-bold"><span>Grand Total</span><span>₹{grandTotal}</span></div>
             </div>
-            {deliveryFee > 0 && <p className="text-xs text-text-tertiary mt-3">Add ₹{199 - total} more for free delivery</p>}
+            {deliveryFee > 0 && <p className="text-xs text-text-tertiary mt-3">Add ₹{499 - total} more for free delivery</p>}
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => navigate('/checkout')}
               className="w-full mt-5 py-3 gradient-primary text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-primary/25 transition-all flex items-center justify-center gap-2">
               Proceed to Checkout <FiArrowRight className="w-4 h-4" />

@@ -95,7 +95,7 @@ export const DEMO_PRODUCTS = [
 export const HERO_BANNERS = [
   { id: 1, title: 'Fresh Groceries', subtitle: 'Delivered in 10 minutes', gradient: 'from-orange-500 to-yellow-400', emoji: '🥬' },
   { id: 2, title: 'Up to 50% OFF', subtitle: 'On daily essentials', gradient: 'from-green-500 to-emerald-400', emoji: '🎉' },
-  { id: 3, title: 'Free Delivery', subtitle: 'On orders above ₹199', gradient: 'from-blue-500 to-cyan-400', emoji: '🚀' },
+  { id: 3, title: 'Free Delivery', subtitle: 'On orders above ₹499', gradient: 'from-blue-500 to-cyan-400', emoji: '🚀' },
 ];
 
 export const FLASH_SALE_ITEMS = [

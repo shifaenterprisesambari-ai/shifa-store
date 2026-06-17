@@ -65,7 +65,7 @@ const Checkout = () => {
       console.error('Failed to update profile location:', err);
     }
   };
-  const deliveryFee = total > 199 ? 0 : 25;
+  const deliveryFee = total > 499 ? 0 : 25;
   const grandTotal = total + deliveryFee;
 
   useEffect(() => {
