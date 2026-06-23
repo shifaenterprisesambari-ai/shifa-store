@@ -9,10 +9,20 @@ import { syncParentOrderStatus } from "../../services/orderSyncService.js";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+let razorpayInstance = null;
+const getRazorpay = () => {
+  if (!razorpayInstance) {
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.warn("⚠️ Razorpay keys are not set. Online payments will not be available.");
+      return null;
+    }
+    razorpayInstance = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+  }
+  return razorpayInstance;
+};
 
 
 export const createOrder = async(req,reply)=>{
@@ -175,7 +185,11 @@ export const createOrder = async(req,reply)=>{
                 currency: "INR",
                 receipt: `receipt_${parentOrder._id}`,
             };
-            razorpayOrder = await razorpay.orders.create(options);
+            const rInstance = getRazorpay();
+            if (!rInstance) {
+                return reply.status(400).send({ message: "Online payment is currently unavailable (Razorpay is not configured)." });
+            }
+            razorpayOrder = await rInstance.orders.create(options);
             parentOrder.razorpayOrderId = razorpayOrder.id;
         }
 
