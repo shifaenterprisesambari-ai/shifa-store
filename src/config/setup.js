@@ -42,8 +42,8 @@ export const admin = new AdminJS({
       resource: Models.ShopOwner,
       options: {
         listProperties: ["name", "email", "shopName", "phone", "role", "isActivated"],
-        showProperties: ["name", "email", "shopName", "shopImage", "shopAddress", "phone", "role", "branch", "shop", "isActivated"],
-        editProperties: ["name", "email", "password", "shopName", "shopImage", "shopAddress", "phone", "branch", "shop", "isActivated"],
+        showProperties: ["name", "email", "shopName", "shopImage", "shopAddress", "phone", "role", "branch", "isActivated"],
+        editProperties: ["name", "email", "password", "shopName", "shopImage", "shopAddress", "phone", "branch", "isActivated"],
         filterProperties: ["email", "role", "shopName"],
         properties: {
           password: { isVisible: { list: false, show: false, edit: true, filter: false } },
