@@ -73,8 +73,21 @@ const Cart = () => {
               <div className="flex justify-between text-base font-bold"><span>Grand Total</span><span>₹{grandTotal}</span></div>
             </div>
             {deliveryFee > 0 && <p className="text-xs text-text-tertiary mt-3">Add ₹{499 - total} more for free delivery</p>}
-            <motion.button whileTap={{ scale: 0.97 }} onClick={() => navigate('/checkout')}
-              className="w-full mt-5 py-3 gradient-primary text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-primary/25 transition-all flex items-center justify-center gap-2">
+            {total < 149 && (
+              <p className="text-xs text-error font-semibold mt-3 text-center">
+                ⚠️ Minimum order value is ₹149. Add ₹{149 - total} more to checkout.
+              </p>
+            )}
+            <motion.button 
+              whileTap={total >= 149 ? { scale: 0.97 } : {}} 
+              onClick={() => total >= 149 && navigate('/checkout')}
+              disabled={total < 149}
+              className={`w-full mt-5 py-3 font-semibold rounded-xl flex items-center justify-center gap-2 transition-all ${
+                total >= 149 
+                  ? 'gradient-primary text-white hover:shadow-lg hover:shadow-primary/25' 
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+            >
               Proceed to Checkout <FiArrowRight className="w-4 h-4" />
             </motion.button>
           </div>

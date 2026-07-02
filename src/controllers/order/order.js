@@ -38,6 +38,13 @@ export const createOrder = async(req,reply)=>{
         const { userId, role } = req.user;
         const { items, branch, totalPrice, paymentMethod = "COD" } = req.body;
 
+        // Check for minimum order value of ₹149
+        if (Number(totalPrice) < 149) {
+            return reply.status(400).send({
+                message: "Minimum order value is ₹149. Please add more items to place your order.",
+            });
+        }
+
         // Only customers can place orders
         if (role && role !== "Customer") {
             return reply.status(403).send({
