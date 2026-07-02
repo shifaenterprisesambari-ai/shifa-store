@@ -28,6 +28,13 @@ const getRazorpay = () => {
 export const createOrder = async(req,reply)=>{
     console.log("POST /order request received! Body:", req.body);
     try {
+        // Check if ordering is globally suspended/on hold
+        if (process.env.DISABLE_ORDERS === "true") {
+            return reply.status(503).send({
+                message: "Shifa Store is temporarily on hold and not accepting orders. Please try again later.",
+            });
+        }
+
         const { userId, role } = req.user;
         const { items, branch, totalPrice, paymentMethod = "COD" } = req.body;
 
