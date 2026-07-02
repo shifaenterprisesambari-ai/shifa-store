@@ -2,7 +2,8 @@ import { Customer, DeliveryPartner, ShopOwner } from "../../models/user.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { OAuth2Client } from "google-auth-library";
-
+import { sendWhatsApp } from "../../services/whatsappService.js";
+import { sendEmail } from "../../services/emailService.js";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -412,8 +413,40 @@ export const forgotPassword = async (req, reply) => {
     console.log(`[Forgot Password] OTP for ${email}: ${otp}`);
     console.log(`==========================================\n`);
 
+    let responseMessage = "A password reset verification OTP has been generated. Please check the server console for the code.";
+    let sentVia = [];
+
+    // 1. Send via Gmail SMTP
+    if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <h2 style="color: #333; text-align: center;">Shifa Store Password Reset</h2>
+          <p>Hello,</p>
+          <p>You requested a password reset for your Shifa Store account. Please use the following 6-digit verification code to reset your password:</p>
+          <div style="font-size: 24px; font-weight: bold; text-align: center; margin: 30px 0; letter-spacing: 5px; color: #4F46E5;">${otp}</div>
+          <p>This verification code is valid for <strong>10 minutes</strong>. If you did not request this password reset, please ignore this email.</p>
+          <br />
+          <p>Best regards,</p>
+          <p><strong>Shifa Store Team</strong></p>
+        </div>
+      `;
+      await sendEmail(email, "Shifa Store - Password Reset OTP", emailHtml);
+      sentVia.push("Email");
+    }
+
+    // 2. Send via WhatsApp
+    if (customer.phone) {
+      const whatsappMessage = `Your Shifa Store password reset verification code is: *${otp}*. It is valid for 10 minutes.`;
+      await sendWhatsApp(customer.phone, whatsappMessage);
+      sentVia.push("WhatsApp");
+    }
+
+    if (sentVia.length > 0) {
+      responseMessage = `A password reset verification OTP has been sent via ${sentVia.join(" and ")}.`;
+    }
+
     return reply.send({
-      message: "A password reset verification OTP has been generated. Please check the server console for the code.",
+      message: responseMessage,
     });
   } catch (error) {
     console.error("Forgot password error:", error);
