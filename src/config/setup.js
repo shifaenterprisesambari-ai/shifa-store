@@ -7,11 +7,47 @@ import { dark, light, noSidebar } from "@adminjs/themes";
 
 AdminJS.registerAdapter(AdminJSMongoose)
 
+const filterByBranchHook = async (request, context) => {
+  const currentAdmin = context.currentAdmin;
+  if (currentAdmin && currentAdmin.branch) {
+    request.query = request.query || {};
+    request.query.filter = request.query.filter || {};
+    request.query.filter.branch = currentAdmin.branch.toString();
+  }
+  return request;
+};
+
+const filterBranchSelfHook = async (request, context) => {
+  const currentAdmin = context.currentAdmin;
+  if (currentAdmin && currentAdmin.branch) {
+    request.query = request.query || {};
+    request.query.filter = request.query.filter || {};
+    request.query.filter._id = currentAdmin.branch.toString();
+  }
+  return request;
+};
+
+const saveBranchHook = async (request, context) => {
+  const currentAdmin = context.currentAdmin;
+  if (currentAdmin && currentAdmin.branch) {
+    if (request.payload) {
+      request.payload.branch = currentAdmin.branch.toString();
+    }
+  }
+  return request;
+};
+
 export const admin = new AdminJS({
   resources: [
     {
       resource: Models.Customer,
       options: {
+        actions: {
+          list: { before: filterByBranchHook },
+          search: { before: filterByBranchHook },
+          new: { before: saveBranchHook },
+          edit: { before: saveBranchHook },
+        },
         listProperties: ["name", "email", "plainPassword", "phone", "role", "isActivated"],
         filterProperties: ["email", "phone", "role"],
         properties: {
@@ -23,9 +59,16 @@ export const admin = new AdminJS({
     {
       resource: Models.DeliveryPartner,
       options: {
-        listProperties: ["name", "email", "plainPassword", "phone", "role", "isActivated", "isAvailable"],
-        filterProperties: ["email", "role", "isAvailable"],
+        actions: {
+          list: { before: filterByBranchHook },
+          search: { before: filterByBranchHook },
+          new: { before: saveBranchHook },
+          edit: { before: saveBranchHook },
+        },
+        listProperties: ["idNumber", "name", "email", "plainPassword", "phone", "role", "isActivated", "isAvailable"],
+        filterProperties: ["idNumber", "email", "role", "isAvailable"],
         properties: {
+          idNumber: { label: "ID Number", isTitle: true },
           password: { isVisible: { list: false, show: false, edit: true, filter: false } },
           plainPassword: { isVisible: { list: true, show: true, edit: false, filter: false } },
         },
@@ -34,34 +77,65 @@ export const admin = new AdminJS({
     {
       resource: Models.Admin,
       options: {
-        listProperties: ["email", "role", "isActivated"],
+        listProperties: ["email", "role", "isActivated", "branch"],
         filterProperties: ["email", "role"],
       },
     },
     {
       resource: Models.ShopOwner,
       options: {
-        listProperties: ["name", "email", "shopName", "phone", "role", "isActivated"],
-        showProperties: ["name", "email", "shopName", "shopImage", "shopAddress", "phone", "role", "branch", "isActivated"],
-        editProperties: ["name", "email", "password", "shopName", "shopImage", "shopAddress", "phone", "branch", "isActivated"],
-        filterProperties: ["email", "role", "shopName"],
+        actions: {
+          list: { before: filterByBranchHook },
+          search: { before: filterByBranchHook },
+          new: { before: saveBranchHook },
+          edit: { before: saveBranchHook },
+        },
+        listProperties: ["idNumber", "name", "email", "shopName", "commissionPercentage", "phone", "role", "isActivated"],
+        showProperties: ["idNumber", "name", "email", "shopName", "commissionPercentage", "shopImage", "shopAddress", "phone", "role", "branch", "isActivated"],
+        editProperties: ["idNumber", "name", "email", "password", "shopName", "commissionPercentage", "shopImage", "shopAddress", "phone", "branch", "isActivated"],
+        filterProperties: ["idNumber", "email", "role", "shopName"],
         properties: {
+          idNumber: { label: "ID Number", isTitle: true },
           password: { isVisible: { list: false, show: false, edit: true, filter: false } },
           plainPassword: { isVisible: { list: true, show: true, edit: false, filter: false } },
           shopName: { label: "Store Name" },
           shopImage: { label: "Store Photo URL" },
           shopAddress: { label: "Store Address" },
+          commissionPercentage: { type: "number", label: "Site Owner Profit Cut (%)" },
         },
       },
     },
-    { resource: Models.Branch },
+    {
+      resource: Models.Branch,
+      options: {
+        actions: {
+          list: { before: filterBranchSelfHook },
+          search: { before: filterBranchSelfHook },
+        },
+        listProperties: ["name", "image", "address", "commissionPercentage"],
+        showProperties: ["name", "image", "address", "commissionPercentage", "location.latitude", "location.longitude", "shopOwner", "deliveryPartners"],
+        editProperties: ["name", "image", "address", "commissionPercentage", "location.latitude", "location.longitude"],
+        properties: {
+          image: { label: "Branch Image URL" },
+          commissionPercentage: { type: "number", label: "Site Owner Profit Cut (%)" },
+          "location.latitude": { type: "number", label: "Latitude" },
+          "location.longitude": { type: "number", label: "Longitude" },
+        }
+      }
+    },
     {
       resource: Models.Product,
       options: {
-        listProperties: ["name", "shop", "category", "price", "stockQuantity", "isEnabled", "isAvailable"],
-        showProperties: ["name", "shop", "category", "price", "discountPrice", "quantity", "stockQuantity", "isEnabled", "isAvailable", "description", "image"],
-        editProperties: ["name", "shop", "category", "price", "discountPrice", "quantity", "stockQuantity", "isEnabled", "isAvailable", "description", "image", "images"],
-        filterProperties: ["shop", "category", "isEnabled", "isAvailable"],
+        actions: {
+          list: { before: filterByBranchHook },
+          search: { before: filterByBranchHook },
+          new: { before: saveBranchHook },
+          edit: { before: saveBranchHook },
+        },
+        listProperties: ["name", "shop", "category", "price", "stockQuantity", "isEnabled", "isAvailable", "branch"],
+        showProperties: ["name", "shop", "category", "price", "discountPrice", "quantity", "stockQuantity", "isEnabled", "isAvailable", "description", "image", "branch"],
+        editProperties: ["name", "shop", "category", "price", "discountPrice", "quantity", "stockQuantity", "isEnabled", "isAvailable", "description", "image", "images", "branch"],
+        filterProperties: ["shop", "category", "isEnabled", "isAvailable", "branch"],
         properties: {
           shop: {
             reference: "ShopOwner",
@@ -73,7 +147,17 @@ export const admin = new AdminJS({
       },
     },
     { resource: Models.Category },
-    { resource: Models.Order },
+    {
+      resource: Models.Order,
+      options: {
+        actions: {
+          list: { before: filterByBranchHook },
+          search: { before: filterByBranchHook },
+          new: { before: saveBranchHook },
+          edit: { before: saveBranchHook },
+        }
+      }
+    },
     { resource: Models.Counter },
     {
       resource: Models.Notification,
@@ -103,12 +187,12 @@ export const buildAdminRouter = async (app) => {
     app,
     {
       store: sessionStore,
-      saveUninitialized: false,
+      saveUninitialized: true,
       secret: COOKIE_PASSWORD,
       cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        secure: false,
+        sameSite: "lax",
       },
     }
   )

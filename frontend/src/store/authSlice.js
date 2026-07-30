@@ -10,11 +10,22 @@ export const fetchUser = createAsyncThunk('auth/fetchUser', async (_, { rejectWi
   }
 });
 
+const getInitialToken = (type) => {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname;
+  let role = 'Customer';
+  if (path.startsWith('/shop')) role = 'ShopOwner';
+  else if (path.startsWith('/delivery')) role = 'DeliveryPartner';
+  else if (path.startsWith('/admin')) role = 'Admin';
+
+  return localStorage.getItem(`${type}_${role}`) || localStorage.getItem(type) || null;
+};
+
 const initialState = {
   user: null,
-  accessToken: localStorage.getItem('accessToken') || null,
-  refreshToken: localStorage.getItem('refreshToken') || null,
-  isAuthenticated: !!localStorage.getItem('accessToken'),
+  accessToken: getInitialToken('accessToken'),
+  refreshToken: getInitialToken('refreshToken'),
+  isAuthenticated: !!getInitialToken('accessToken'),
   loading: false,
   error: null,
 };
@@ -33,8 +44,13 @@ const authSlice = createSlice({
       state.error = null;
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
+      if (user?.role) {
+        localStorage.setItem(`accessToken_${user.role}`, accessToken);
+        localStorage.setItem(`refreshToken_${user.role}`, refreshToken);
+      }
     },
     logout: (state) => {
+      const role = state.user?.role;
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
@@ -43,6 +59,10 @@ const authSlice = createSlice({
       state.error = null;
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      if (role) {
+        localStorage.removeItem(`accessToken_${role}`);
+        localStorage.removeItem(`refreshToken_${role}`);
+      }
     },
     setLoading: (state, action) => {
       state.loading = action.payload;

@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiArrowRight, FiClock, FiZap, FiTruck, FiX } from 'react-icons/fi';
-import { useDispatch } from 'react-redux';
+import { FiArrowRight, FiClock, FiZap, FiTruck, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../store/cartSlice';
 import toast from 'react-hot-toast';
 import { productService } from '../../services/productService';
 import ProductCard from '../../components/ProductCard';
 import { Spinner, SkeletonList, SkeletonCategoryRow } from '../../components/ui/Loaders';
 import { HERO_BANNERS, DEMO_SHOPS } from '../../constants';
+import LocationModal from '../../components/layout/LocationModal';
 
 const Home = () => {
   const [categories, setCategories] = useState([]);
@@ -22,14 +23,34 @@ const Home = () => {
   const [storeProducts, setStoreProducts] = useState([]);
   const [loadingStoreProducts, setLoadingStoreProducts] = useState(false);
 
+  const { activeBranch } = useSelector((s) => s.branch);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const dealsScrollRef = useRef(null);
+
+  const scrollDeals = (direction) => {
+    if (dealsScrollRef.current) {
+      const scrollAmount = direction === 'left' ? -380 : 380;
+      dealsScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     loadData();
     const interval = setInterval(() => setActiveBanner((p) => (p + 1) % HERO_BANNERS.length), 4000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!activeBranch) {
+      setShowLocationPrompt(true);
+    } else {
+      setShowLocationPrompt(false);
+    }
+  }, [activeBranch]);
 
   const loadData = async () => {
     try {
@@ -221,8 +242,8 @@ const Home = () => {
       <section className="px-2.5 sm:px-4">
         <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide py-1">
           {[
-            { icon: <FiZap className="w-4 h-4 text-primary" />, text: '10 Min Delivery' },
-            { icon: <FiTruck className="w-4 h-4 text-success" />, text: 'Free above ₹499' },
+            { icon: <FiZap className="w-4 h-4 text-primary" />, text: 'Super Fast Delivery' },
+            { icon: <FiTruck className="w-4 h-4 text-success" />, text: 'Doorstep Delivery' },
             { icon: <FiClock className="w-4 h-4 text-info" />, text: 'Best Prices' },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-2 px-4 py-2 bg-bg-secondary rounded-xl text-xs font-medium text-text-secondary whitespace-nowrap shrink-0">
@@ -263,16 +284,36 @@ const Home = () => {
       {/* Deals - Premium Improved Section */}
       {!loading && allProducts.length > 0 && (
         <section className="px-2.5 sm:px-4">
-          <div className="bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent px-3.5 py-5 sm:p-5 rounded-2xl sm:rounded-3xl border border-orange-100/50">
+          <div className="relative group bg-gradient-to-br from-orange-500/8 via-red-500/4 to-transparent px-3.5 py-5 sm:p-5 rounded-2xl sm:rounded-3xl border border-orange-100/50">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2.5">
-                <h2 className="text-lg font-black text-text tracking-tight">
-                  Deals
+                <h2 className="text-lg font-black text-text tracking-tight flex items-center gap-2">
+                  🔥 Deals
                 </h2>
               </div>
             </div>
 
-            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+            {/* Left Floating Glassmorphism Arrow Button */}
+            <button
+              type="button"
+              onClick={() => scrollDeals('left')}
+              className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-black/35 hover:bg-orange-500 text-white backdrop-blur-md items-center justify-center border border-white/30 shadow-xl hover:scale-110 active:scale-95 transition-all opacity-70 group-hover:opacity-100 cursor-pointer"
+              title="Previous Deals"
+            >
+              <FiChevronLeft className="w-6 h-6" />
+            </button>
+
+            {/* Right Floating Glassmorphism Arrow Button */}
+            <button
+              type="button"
+              onClick={() => scrollDeals('right')}
+              className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-black/35 hover:bg-orange-500 text-white backdrop-blur-md items-center justify-center border border-white/30 shadow-xl hover:scale-110 active:scale-95 transition-all opacity-70 group-hover:opacity-100 cursor-pointer"
+              title="Next Deals"
+            >
+              <FiChevronRight className="w-6 h-6" />
+            </button>
+
+            <div ref={dealsScrollRef} className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 scroll-smooth">
               {allProducts.map((item, i) => {
               const soldPercent = [78, 45, 88, 62][i % 4];
               const salePrice = item.price;
@@ -473,51 +514,50 @@ const Home = () => {
       )}
 
       <div className="h-20 sm:h-28 w-full" />
-      {/* Offers & Coupons Banner - High-fidelity design */}
+      {/* Express Delivery & Quality Guarantee Banner */}
       <section className="px-2.5 sm:px-4 mb-36 sm:mb-52">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="bg-gradient-to-br from-[#FF7A00] via-[#FF9A1F] to-[#FFC400] relative overflow-hidden rounded-2xl sm:rounded-[22px] px-6 py-16 sm:px-16 sm:py-24 text-white shadow-2xl shadow-orange-500/10 border border-white/10"
+          className="bg-gradient-to-br from-[#111827] via-[#1E293B] to-[#0F172A] relative overflow-hidden rounded-2xl sm:rounded-[24px] px-6 py-10 sm:px-12 sm:py-14 text-white shadow-2xl shadow-gray-900/20 border border-white/10"
         >
-          {/* Background shapes */}
-          <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-white/10 blur-2xl"></div>
-          <div className="absolute -left-10 -bottom-10 w-52 h-52 rounded-full bg-orange-600/20 blur-2xl"></div>
+          {/* Background glowing shapes */}
+          <div className="absolute -right-12 -top-12 w-64 h-64 rounded-full bg-orange-500/15 blur-3xl"></div>
+          <div className="absolute -left-12 -bottom-12 w-64 h-64 rounded-full bg-emerald-500/15 blur-3xl"></div>
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6">
-            <div>
-              <span className="inline-block px-3 py-1 bg-white/15 backdrop-blur-md text-[10px] font-black rounded-full uppercase tracking-widest border border-white/20 mb-2.5 sm:mb-3.5">
-                🎁 Welcome Gift
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-orange-500/20 to-amber-500/20 backdrop-blur-md text-[11px] font-black text-orange-400 rounded-full uppercase tracking-wider border border-orange-500/30 mb-3">
+                <FiZap className="w-3.5 h-3.5" /> Express Local Delivery
               </span>
-              <h2 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight sm:leading-none">
-                Get ₹100 Off Your Order!
+              <h2 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
+                Fresh Groceries Delivered <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400">in Minutes</span>
               </h2>
-              <p className="text-white/90 text-xs sm:text-sm mt-2 sm:mt-3.5 max-w-md font-medium">
-                Save big on your very first order at Shifa Store. Fresh groceries and household essentials delivered in minutes.
+              <p className="text-gray-300 text-xs sm:text-sm mt-2.5 max-w-xl font-medium leading-relaxed">
+                Directly from verified local Ambari partner shops to your door. Guaranteed farm-fresh quality, instant order tracking & hassle-free replacements.
               </p>
               
-              <div className="relative inline-flex items-center gap-2 sm:gap-3 mt-4 sm:mt-6 pl-5 pr-7 sm:pl-6 sm:pr-8 py-2 sm:py-2.5 bg-black/10 backdrop-blur-md rounded-xl border border-white/10 shadow-inner">
-                {/* Perforated ticket punch notches */}
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-white"></div>
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-white"></div>
-                
-                <span className="relative z-10 text-[10px] sm:text-xs font-black text-white/95 uppercase tracking-wide pl-1.5">
-                  🏷️ Use Code:
-                </span>
-                <span className="relative z-10 text-[11px] sm:text-sm font-black bg-white text-primary px-3 sm:px-3.5 py-1 rounded-lg shadow-md tracking-widest uppercase">
-                  SHIFA100
-                </span>
+              <div className="flex flex-wrap gap-2.5 sm:gap-3 mt-5">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-[11px] sm:text-xs font-semibold text-gray-200">
+                  <span className="text-emerald-400 font-bold">🚚 Free Delivery</span> over ₹199
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-[11px] sm:text-xs font-semibold text-gray-200">
+                  <span className="text-amber-400 font-bold">🥬 100% Quality</span> Guarantee
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-[11px] sm:text-xs font-semibold text-gray-200">
+                  <span className="text-orange-400 font-bold">📍 Real-time</span> Live Tracking
+                </div>
               </div>
             </div>
 
             <motion.button
-              whileHover={{ scale: 1.04, y: -2 }}
-              whileTap={{ scale: 0.96 }}
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => navigate('/search')}
-              className="px-6 py-3.5 sm:px-8 sm:py-4 bg-gray-950 text-white hover:bg-gray-900 font-black text-xs sm:text-base rounded-xl shadow-2xl hover:shadow-black/25 transition-all flex items-center gap-2.5 w-fit shrink-0 cursor-pointer self-start md:self-center border border-white/10 group"
+              className="px-6 py-3.5 sm:px-8 sm:py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs sm:text-base rounded-xl shadow-lg shadow-orange-500/25 transition-all flex items-center gap-2.5 w-fit shrink-0 cursor-pointer self-start md:self-center group"
             >
-              Order Now <FiArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-[#FF9A1F] group-hover:translate-x-1 transition-transform duration-300" />
+              Start Shopping <FiArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform duration-300" />
             </motion.button>
           </div>
         </motion.div>
@@ -585,6 +625,7 @@ const Home = () => {
           </motion.div>
         </div>
       )}
+      <LocationModal isOpen={showLocationPrompt} onClose={() => setShowLocationPrompt(false)} />
     </div>
   );
 };

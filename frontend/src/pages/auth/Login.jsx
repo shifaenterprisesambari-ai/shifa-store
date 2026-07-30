@@ -1,17 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
-import { FiMail, FiLock, FiEye, FiEyeOff, FiX, FiKey } from 'react-icons/fi';
+import { FiMail, FiPhone, FiLock, FiEye, FiEyeOff, FiX, FiKey, FiMapPin } from 'react-icons/fi';
 import { authService } from '../../services/authService';
 import { loginSuccess } from '../../store/authSlice';
 import toast from 'react-hot-toast';
+import { GoogleLogin } from '@react-oauth/google';
+import LocationModal from '../../components/layout/LocationModal';
 
 const Login = () => {
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loginType, setLoginType] = useState('customer');
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
+  const { activeBranch } = useSelector((s) => s.branch);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors } } = useForm();
@@ -24,35 +28,54 @@ const Login = () => {
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [showForgotPwd, setShowForgotPwd] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (resendTimer > 0) {
+      timer = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendTimer]);
 
   const handleForgotPasswordSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!forgotEmail) {
-      toast.error('Please enter your email');
+      toast.error('Please enter your mobile number or email');
       return;
     }
     setForgotLoading(true);
     try {
-      const response = await authService.forgotPassword(forgotEmail);
+      const isEmail = /^\S+@\S+\.\S+$/.test(forgotEmail.trim());
+      const payload = isEmail ? { email: forgotEmail.trim() } : { phone: forgotEmail.trim() };
+
+      const response = await authService.forgotPassword(payload);
       toast.success(response.data?.message || 'Verification OTP sent successfully!');
-      console.log('Forgot Password OTP:', response.data?.otp);
       setForgotStep(2);
+      setResendTimer(30);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to send OTP');
+      toast.error(err.response?.data?.message || 'Failed to send verification OTP');
     } finally {
       setForgotLoading(false);
     }
   };
 
   const handleResetPasswordSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!forgotOtp || !forgotNewPassword) {
       toast.error('Please fill in all fields');
       return;
     }
     setForgotLoading(true);
     try {
-      const response = await authService.resetPassword(forgotEmail, forgotOtp, forgotNewPassword);
+      const isEmail = /^\S+@\S+\.\S+$/.test(forgotEmail.trim());
+      const payload = isEmail 
+        ? { email: forgotEmail.trim(), otp: forgotOtp.trim(), newPassword: forgotNewPassword }
+        : { phone: forgotEmail.trim(), otp: forgotOtp.trim(), newPassword: forgotNewPassword };
+
+      const response = await authService.resetPassword(payload);
       toast.success(response.data?.message || 'Password reset successful!');
       setShowForgotModal(false);
       // Reset state
@@ -60,6 +83,7 @@ const Login = () => {
       setForgotEmail('');
       setForgotOtp('');
       setForgotNewPassword('');
+      setResendTimer(0);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to reset password');
     } finally {
@@ -69,18 +93,27 @@ const Login = () => {
 
   const onSubmit = async (values) => {
     setLoading(true);
+    const cleanValues = {
+      ...values,
+      phone: values.phone ? values.phone.replace(/\s+/g, '') : values.phone
+    };
     try {
       let res;
       if (loginType === 'customer') {
-        res = await authService.loginEmail(values);
-        dispatch(loginSuccess({ user: res.data.customer, accessToken: res.data.accessToken, refreshToken: res.data.refreshToken }));
-        navigate('/');
+        res = await authService.loginEmail(cleanValues);
+        const loggedUser = res.data.customer;
+        dispatch(loginSuccess({ user: loggedUser, accessToken: res.data.accessToken, refreshToken: res.data.refreshToken }));
+        if (loggedUser?.role === 'Admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/');
+        }
       } else if (loginType === 'shopowner') {
-        res = await authService.loginShopOwner(values);
+        res = await authService.loginShopOwner(cleanValues);
         dispatch(loginSuccess({ user: res.data.shopOwner, accessToken: res.data.accessToken, refreshToken: res.data.refreshToken }));
         navigate('/shop/dashboard');
       } else if (loginType === 'delivery') {
-        res = await authService.loginDeliveryPartner(values);
+        res = await authService.loginDeliveryPartner(cleanValues);
         dispatch(loginSuccess({ user: res.data.deliveryPartner, accessToken: res.data.accessToken, refreshToken: res.data.refreshToken }));
         navigate('/delivery/dashboard');
       }
@@ -130,36 +163,64 @@ const Login = () => {
             ))}
           </div>
 
+          {/* Branch / Location Selector */}
+          <div className="mb-6 p-4 rounded-xl border border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <FiMapPin className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase font-bold text-text-tertiary tracking-wider">Current Branch / Zone</p>
+                <p className="text-sm font-bold text-text mt-0.5">
+                  {activeBranch?.name || 'No Branch Selected'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLocationModalOpen(true)}
+              className="px-3 py-1.5 bg-white hover:bg-slate-100 text-xs font-semibold text-primary rounded-lg border border-slate-100 shadow-sm transition-all"
+            >
+              Change
+            </button>
+          </div>
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
-              <label className="text-sm font-medium text-text-secondary mb-1.5 block">Email</label>
+              <label className="text-sm font-medium text-text-secondary mb-1.5 block">Mobile Number</label>
               <div className="relative">
-                <FiMail className="absolute left-4.5 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4 z-10" />
-                <input {...register('email', { required: 'Email is required', pattern: { value: /^\S+@\S+\.\S+$/, message: 'Invalid email' } })}
-                  type="email" placeholder="Enter your email"
+                <FiPhone className="absolute left-4.5 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4 z-10" />
+                <input {...register('phone', { 
+                  required: 'Mobile number is required', 
+                  validate: (val) => {
+                    const cleaned = val ? val.replace(/\s+/g, '') : '';
+                    const isPhone = /^\+?\d{10,15}$/.test(cleaned);
+                    const isEmail = /^\S+@\S+\.\S+$/.test(cleaned);
+                    return (isPhone || isEmail) || 'Invalid mobile number or email format';
+                  }
+                })}
+                  type="text" placeholder="Enter your mobile number"
                   className="w-full login-input bg-bg-secondary rounded-xl text-sm border border-transparent focus:border-primary/30 focus:bg-white focus:outline-none transition-all" />
               </div>
-              {errors.email && <p className="text-error text-xs mt-1">{errors.email.message}</p>}
+              {errors.phone && <p className="text-error text-xs mt-1">{errors.phone.message}</p>}
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-1.5">
                 <label className="text-sm font-medium text-text-secondary">Password</label>
-                {loginType === 'customer' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForgotEmail('');
-                      setForgotOtp('');
-                      setForgotNewPassword('');
-                      setForgotStep(1);
-                      setShowForgotModal(true);
-                    }}
-                    className="text-xs font-semibold text-primary hover:underline transition-all cursor-pointer focus:outline-none"
-                  >
-                    Forgot Password?
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotEmail('');
+                    setForgotOtp('');
+                    setForgotNewPassword('');
+                    setForgotStep(1);
+                    setShowForgotModal(true);
+                  }}
+                  className="text-xs font-semibold text-primary hover:underline transition-all cursor-pointer focus:outline-none"
+                >
+                  Forgot Password?
+                </button>
               </div>
               <div className="relative">
                 <FiLock className="absolute left-4.5 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4 pointer-events-none z-10" />
@@ -184,22 +245,53 @@ const Login = () => {
 
           {loginType === 'customer' && (
             <>
-              {/* <div className="flex items-center gap-3 my-6">
-                <hr className="flex-1 border-border" />
-                <span className="text-xs text-text-tertiary">OR</span>
-                <hr className="flex-1 border-border" />
+              <div className="relative my-6 text-center">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
+                <span className="relative px-3 bg-white text-xs font-semibold text-text-tertiary uppercase tracking-wider">Or continue with</span>
               </div>
 
-              <button className="w-full py-3 border border-border rounded-xl text-sm font-medium text-text hover:bg-bg-secondary transition-colors flex items-center justify-center gap-3">
-                <svg className="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                Continue with Google
-              </button> */}
-
-              <p className="text-center text-sm text-text-secondary mt-6">
-                Don't have an account? <Link to="/signup" className="text-primary font-semibold hover:underline">Sign Up</Link>
-              </p>
+              <div className="flex justify-center w-full">
+                <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    if (credentialResponse.credential) {
+                      try {
+                        setLoading(true);
+                        const res = await authService.loginGoogle({ idToken: credentialResponse.credential });
+                        const loggedUser = res.data.user;
+                        dispatch(loginSuccess({ user: loggedUser, accessToken: res.data.accessToken, refreshToken: res.data.refreshToken }));
+                        toast.success(`Welcome to Shifa Store, ${loggedUser.name || 'Customer'}! 🎉`);
+                        navigate('/');
+                      } catch (err) {
+                        toast.error(err.response?.data?.message || 'Google Sign-In failed');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }
+                  }}
+                  onError={() => {
+                    toast.error('Google Sign-In was cancelled or failed');
+                  }}
+                  useOneTap
+                  theme="outline"
+                  size="large"
+                  text="continue_with"
+                  shape="pill"
+                  width="100%"
+                />
+              </div>
             </>
           )}
+
+          <p className="text-center text-sm text-text-secondary mt-6">
+            Don't have an account?{' '}
+            <Link to={`/signup?role=${loginType}`} className="text-primary font-semibold hover:underline">
+              {loginType === 'customer'
+                ? 'Sign Up'
+                : loginType === 'shopowner'
+                ? 'Register as Shop Owner'
+                : 'Register as Delivery Partner'}
+            </Link>
+          </p>
         </motion.div>
       </div>
 
@@ -238,23 +330,23 @@ const Login = () => {
                 <h3 className="text-xl font-bold text-text">Reset Password</h3>
                 <p className="text-text-secondary text-sm mt-1">
                   {forgotStep === 1
-                    ? 'Enter your email to receive a verification OTP.'
-                    : 'Enter the verification OTP and your new password.'}
+                    ? 'Enter your mobile number or email to receive a verification OTP via SMS or Email.'
+                    : 'Enter the 6-digit verification OTP and your new password.'}
                 </p>
               </div>
 
               {forgotStep === 1 ? (
                 <form onSubmit={handleForgotPasswordSubmit} className="space-y-5">
                   <div>
-                    <label className="text-sm font-medium text-text-secondary mb-1.5 block">Email Address</label>
+                    <label className="text-sm font-medium text-text-secondary mb-1.5 block">Mobile Number or Email</label>
                     <div className="relative">
-                      <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4" />
+                      <FiPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary w-4 h-4" />
                       <input
-                        type="email"
+                        type="text"
                         required
                         value={forgotEmail}
                         onChange={(e) => setForgotEmail(e.target.value)}
-                        placeholder="yourname@example.com"
+                        placeholder="Enter mobile number or email"
                         className="w-full pl-11 pr-4 py-3 bg-bg-secondary rounded-xl text-sm border border-transparent focus:border-primary/30 focus:bg-white focus:outline-none transition-all"
                       />
                     </div>
@@ -313,7 +405,19 @@ const Login = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex items-center justify-between text-xs text-text-secondary pt-1">
+                    <span>Didn't receive the code?</span>
+                    <button
+                      type="button"
+                      disabled={resendTimer > 0 || forgotLoading}
+                      onClick={() => handleForgotPasswordSubmit()}
+                      className="text-primary font-semibold hover:underline disabled:opacity-50 disabled:no-underline cursor-pointer focus:outline-none"
+                    >
+                      {resendTimer > 0 ? `Resend Code (${resendTimer}s)` : 'Resend Code'}
+                    </button>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
                     <button
                       type="button"
                       onClick={() => setForgotStep(1)}
@@ -340,6 +444,8 @@ const Login = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <LocationModal isOpen={locationModalOpen} onClose={() => setLocationModalOpen(false)} />
     </div>
   );
 };

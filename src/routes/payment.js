@@ -1,7 +1,10 @@
-import { createRazorpayOrder, verifyRazorpayPayment } from "../controllers/payment/payment.js";
+import { createRazorpayOrder, verifyRazorpayPayment, razorpayWebhook } from "../controllers/payment/payment.js";
 import jwt from "jsonwebtoken";
 
 export const paymentRoutes = async (fastify, options) => {
+  // Public webhook route (called by Razorpay servers)
+  fastify.post("/payment/razorpay-webhook", razorpayWebhook);
+
   fastify.addHook("preHandler", async (request, reply) => {
     try {
       const authHeader = request.headers["authorization"];

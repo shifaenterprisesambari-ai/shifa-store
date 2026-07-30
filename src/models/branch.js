@@ -18,6 +18,12 @@ const branchSchema = new mongoose.Schema({
       ref: "DeliveryPartner",
     },
   ],
+  commissionPercentage: {
+    type: Number,
+    default: 10,
+    min: 0,
+    max: 100,
+  },
 });
 
 const Branch = mongoose.model("Branch", branchSchema);

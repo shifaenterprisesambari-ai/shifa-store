@@ -20,10 +20,30 @@ const productScehma = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "ShopOwner",
   },
+  branch: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Branch",
+  },
+  totalSold: { type: Number, default: 0 }
 });
 
 productScehma.index({ shop: 1, isEnabled: 1 });
+productScehma.index({ branch: 1, isEnabled: 1 });
 productScehma.index({ category: 1, isAvailable: 1 });
+
+productScehma.pre("save", async function (next) {
+  if ((this.isModified("shop") || !this.branch) && this.shop) {
+    try {
+      const shopOwner = await mongoose.model("ShopOwner").findById(this.shop).select("branch");
+      if (shopOwner && shopOwner.branch) {
+        this.branch = shopOwner.branch;
+      }
+    } catch (err) {
+      return next(err);
+    }
+  }
+  next();
+});
 
 const Product = mongoose.model("Product", productScehma);
 

@@ -1,5 +1,6 @@
 import Order from "../../models/order.js";
-import { DeliveryPartner } from "../../models/user.js";
+import { DeliveryPartner, ShopOwner } from "../../models/user.js";
+import Product from "../../models/products.js";
 import { verifyOtp } from "../../services/otpService.js";
 import { createNotification } from "../../services/notificationService.js";
 import { syncChildOrders } from "../../services/orderSyncService.js";
@@ -148,6 +149,22 @@ export const acceptDelivery = async (req, reply) => {
       io,
     });
 
+    // Notify shop owners of child orders
+    const children = await Order.find({ parentOrder: order._id });
+    for (const child of children) {
+      if (child.shopOwner) {
+        await createNotification({
+          recipient: child.shopOwner,
+          recipientModel: "ShopOwner",
+          title: "Delivery Partner Assigned",
+          message: `Delivery partner ${rider.name || "A rider"} has accepted order ${child.orderId} and is heading to the store to pick up the items.`,
+          type: "rider_assigned",
+          orderId: child._id,
+          io,
+        });
+      }
+    }
+
     await syncChildOrders({ parentOrder: order, io });
 
     // Exclude deliveryOtp for security
@@ -220,6 +237,22 @@ export const cancelDelivery = async (req, reply) => {
       io,
     });
 
+    // Notify shop owners of child orders
+    const children = await Order.find({ parentOrder: order._id });
+    for (const child of children) {
+      if (child.shopOwner) {
+        await createNotification({
+          recipient: child.shopOwner,
+          recipientModel: "ShopOwner",
+          title: "Rider Assignment Released",
+          message: `The delivery rider assigned to order ${child.orderId} has released the assignment. A new rider will be assigned shortly.`,
+          type: "rider_assigned",
+          orderId: child._id,
+          io,
+        });
+      }
+    }
+
     await syncChildOrders({ parentOrder: order, io });
 
     // Exclude deliveryOtp for security
@@ -284,6 +317,23 @@ export const pickupOrder = async (req, reply) => {
       orderId: order._id,
       io,
     });
+
+    // Notify shop owners of child orders
+    const children = await Order.find({ parentOrder: order._id });
+    const rider = await DeliveryPartner.findById(userId);
+    for (const child of children) {
+      if (child.shopOwner) {
+        await createNotification({
+          recipient: child.shopOwner,
+          recipientModel: "ShopOwner",
+          title: "Order Picked Up",
+          message: `Order ${child.orderId} has been picked up by delivery partner ${rider?.name || "A rider"}.`,
+          type: "out_for_delivery",
+          orderId: child._id,
+          io,
+        });
+      }
+    }
 
     await syncChildOrders({ parentOrder: order, io });
 
@@ -431,6 +481,23 @@ export const completeDelivery = async (req, reply) => {
     // Now mark only the matched child order as delivered
     matchedChild.status = "delivered";
     await matchedChild.save();
+
+    // Increment sales counters (totalSold) for product items and store owner
+    try {
+      let totalItemsCount = 0;
+      for (const item of matchedChild.items) {
+        const productId = item.item || item.id;
+        if (productId) {
+          await Product.findByIdAndUpdate(productId, { $inc: { totalSold: item.count } });
+          totalItemsCount += item.count;
+        }
+      }
+      if (matchedChild.shopOwner) {
+        await ShopOwner.findByIdAndUpdate(matchedChild.shopOwner, { $inc: { totalSold: totalItemsCount } });
+      }
+    } catch (err) {
+      console.error("Failed to update sales metrics on delivery completion:", err);
+    }
 
     if (io) {
       io.to(matchedChild._id.toString()).emit("delivered", {

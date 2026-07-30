@@ -12,8 +12,8 @@ const Cart = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const deliveryFee = total > 499 ? 0 : 25;
-  const grandTotal = total + deliveryFee;
+  const grandTotal = total;
+  const hasClosedItems = items.some(item => item.shop?.isClosed);
 
   if (items.length === 0) {
     return (
@@ -67,23 +67,27 @@ const Cart = () => {
             <h3 className="text-base font-bold text-text mb-4">Bill Details</h3>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between"><span className="text-text-secondary">Item total</span><span className="font-medium">₹{total}</span></div>
-              <div className="flex justify-between"><span className="text-text-secondary">Delivery fee</span><span className={`font-medium ${deliveryFee === 0 ? 'text-success' : ''}`}>{deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}</span></div>
+              <div className="flex justify-between"><span className="text-text-secondary">Delivery fee</span><span className="font-semibold text-success">₹5 per km</span></div>
               {savings > 0 && <div className="flex justify-between text-success"><span>You save</span><span className="font-medium">₹{savings}</span></div>}
               <hr className="border-border/50" />
-              <div className="flex justify-between text-base font-bold"><span>Grand Total</span><span>₹{grandTotal}</span></div>
+              <div className="flex justify-between text-base font-bold"><span>Subtotal</span><span>₹{grandTotal}</span></div>
             </div>
-            {deliveryFee > 0 && <p className="text-xs text-text-tertiary mt-3">Add ₹{499 - total} more for free delivery</p>}
-            {total < 149 && (
+            {hasClosedItems && (
+              <p className="text-xs text-error font-semibold mt-3 text-center">
+                ⚠️ Some items in your cart belong to an offline shop. Please remove them to proceed.
+              </p>
+            )}
+            {total < 149 && !hasClosedItems && (
               <p className="text-xs text-error font-semibold mt-3 text-center">
                 ⚠️ Minimum order value is ₹149. Add ₹{149 - total} more to checkout.
               </p>
             )}
             <motion.button 
-              whileTap={total >= 149 ? { scale: 0.97 } : {}} 
-              onClick={() => total >= 149 && navigate('/checkout')}
-              disabled={total < 149}
+              whileTap={(total >= 149 && !hasClosedItems) ? { scale: 0.97 } : {}} 
+              onClick={() => total >= 149 && !hasClosedItems && navigate('/checkout')}
+              disabled={total < 149 || hasClosedItems}
               className={`w-full mt-5 py-3 font-semibold rounded-xl flex items-center justify-center gap-2 transition-all ${
-                total >= 149 
+                (total >= 149 && !hasClosedItems)
                   ? 'gradient-primary text-white hover:shadow-lg hover:shadow-primary/25' 
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}

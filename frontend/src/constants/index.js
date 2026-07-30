@@ -80,22 +80,23 @@ export const DEMO_PRODUCTS = [
   { name: 'Wheat Flour', price: 250, discountPrice: 290, quantity: '5 kg', image: 'https://m.media-amazon.com/images/I/71GfLrP5QcL._AC_UL640_QL65_.jpg', category: 'Ata, Rice & Dal', rating: 4.7, stock: 60, deliveryTime: '15 min' },
   { name: 'Mustard Oil', price: 190, discountPrice: 220, quantity: '1 L', image: 'https://m.media-amazon.com/images/I/61fTm0gYtyL._AC_UL640_QL65_.jpg', category: 'Vegetables & Fruits', rating: 4.2, stock: 35, deliveryTime: '20 min' },
   { name: 'Sunflower Oil', price: 160, discountPrice: 180, quantity: '1 L', image: 'https://m.media-amazon.com/images/I/71HjBDnbILL._AC_UL640_QL65_.jpg', category: 'Vegetables & Fruits', rating: 4.1, stock: 40, deliveryTime: '20 min' },
-  { name: 'Amul Milk', price: 34, discountPrice: 38, quantity: '500 ml', image: 'https://m.media-amazon.com/images/I/812816L+HkL._AC_UL640_QL65_.jpg', category: 'Milk, Curd & Paneer', rating: 4.8, stock: 100, deliveryTime: '10 min' },
-  { name: 'Bread', price: 35, discountPrice: 40, quantity: '400 g', image: 'https://m.media-amazon.com/images/I/71dpKUWhfmL._AC_UL640_QL65_.jpg', category: 'Milk, Curd & Paneer', rating: 4.3, stock: 80, deliveryTime: '10 min' },
+  { name: 'Amul Milk', price: 34, discountPrice: 38, quantity: '500 ml', image: 'https://m.media-amazon.com/images/I/812816L+HkL._AC_UL640_QL65_.jpg', category: 'Milk, Curd & Paneer', rating: 4.8, stock: 100, deliveryTime: 'Fast' },
+  { name: 'Bread', price: 35, discountPrice: 40, quantity: '400 g', image: 'https://m.media-amazon.com/images/I/71dpKUWhfmL._AC_UL640_QL65_.jpg', category: 'Milk, Curd & Paneer', rating: 4.3, stock: 80, deliveryTime: 'Fast' },
   { name: 'Eggs', price: 85, discountPrice: 95, quantity: '12 pcs', image: 'https://m.media-amazon.com/images/I/71jJwbXFYCL._AC_UL640_QL65_.jpg', category: 'Milk, Curd & Paneer', rating: 4.6, stock: 70, deliveryTime: '15 min' },
   { name: 'Tea', price: 220, discountPrice: 260, quantity: '250 g', image: 'https://m.media-amazon.com/images/I/71V-bKFcyaL._AC_UL640_QL65_.jpg', category: 'Munchies', rating: 4.5, stock: 55, deliveryTime: '15 min' },
   { name: 'Coffee', price: 310, discountPrice: 350, quantity: '200 g', image: 'https://m.media-amazon.com/images/I/71Z5GnNK5cL._AC_UL640_QL65_.jpg', category: 'Munchies', rating: 4.4, stock: 25, deliveryTime: '15 min' },
-  { name: 'Sugar', price: 48, discountPrice: 55, quantity: '1 kg', image: 'https://m.media-amazon.com/images/I/71MjUHp+mSL._AC_UL640_QL65_.jpg', category: 'Ata, Rice & Dal', rating: 4.2, stock: 90, deliveryTime: '10 min' },
+  { name: 'Sugar', price: 48, discountPrice: 55, quantity: '1 kg', image: 'https://m.media-amazon.com/images/I/71MjUHp+mSL._AC_UL640_QL65_.jpg', category: 'Ata, Rice & Dal', rating: 4.2, stock: 90, deliveryTime: 'Fast' },
   { name: 'Soap', price: 45, discountPrice: 55, quantity: '4 pcs', image: 'https://m.media-amazon.com/images/I/61S5b9YgZSL._AC_UL640_QL65_.jpg', category: 'Cleaning Essentials', rating: 4.1, stock: 65, deliveryTime: '15 min' },
   { name: 'Shampoo', price: 210, discountPrice: 250, quantity: '340 ml', image: 'https://m.media-amazon.com/images/I/61qkJ+VnUfL._AC_UL640_QL65_.jpg', category: 'Pharma & Wellness', rating: 4.3, stock: 40, deliveryTime: '20 min' },
   { name: 'Toothpaste', price: 95, discountPrice: 110, quantity: '150 g', image: 'https://m.media-amazon.com/images/I/61rn05MH8fL._AC_UL640_QL65_.jpg', category: 'Pharma & Wellness', rating: 4.5, stock: 75, deliveryTime: '15 min' },
   { name: 'Detergent', price: 155, discountPrice: 180, quantity: '1 kg', image: 'https://m.media-amazon.com/images/I/71m0bHN7eAL._AC_UL640_QL65_.jpg', category: 'Cleaning Essentials', rating: 4.0, stock: 50, deliveryTime: '20 min' },
+  { name: 'Soap Brand', price: 45, discountPrice: 55, quantity: '4 pcs', image: 'https://m.media-amazon.com/images/I/61S5b9YgZSL._AC_UL640_QL65_.jpg', category: 'Cleaning Essentials', rating: 4.1, stock: 65, deliveryTime: '15 min' },
 ];
 
 export const HERO_BANNERS = [
-  { id: 1, title: 'Fresh Groceries', subtitle: 'Delivered in 10 minutes', gradient: 'from-orange-500 to-yellow-400', emoji: '🥬' },
-  { id: 2, title: 'Up to 50% OFF', subtitle: 'On daily essentials', gradient: 'from-green-500 to-emerald-400', emoji: '🎉' },
-  { id: 3, title: 'Free Delivery', subtitle: 'On orders above ₹499', gradient: 'from-blue-500 to-cyan-400', emoji: '🚀' },
+  { id: 1, title: 'Fresh Groceries', subtitle: 'Delivered super fast', gradient: 'from-orange-500 to-yellow-400', emoji: '🥬' },
+  { id: 2, title: 'Unbeatable Deals', subtitle: 'Great savings on daily essentials', gradient: 'from-green-500 to-emerald-400', emoji: '🔥' },
+  { id: 3, title: 'Express Delivery', subtitle: 'Delivered direct to your door', gradient: 'from-blue-500 to-cyan-400', emoji: '🚀' },
 ];
 
 export const FLASH_SALE_ITEMS = [

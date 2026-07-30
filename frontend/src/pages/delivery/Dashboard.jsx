@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 
 const DeliveryDashboard = () => {
   const [orders, setOrders] = useState([]);
+  const [historyOrders, setHistoryOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('available'); // Default to Available Offers
   const { user } = useSelector((s) => s.auth);
@@ -20,34 +21,50 @@ const DeliveryDashboard = () => {
   const [modalConfig, setModalConfig] = useState(null);
 
   const activeOrder = orders.find(o => ['acceptedByRider', 'pickedUp', 'outForDelivery'].includes(o.status));
+  
+  // Filter active order out of general lists
+  const displayedOrders = orders.filter(o => o._id !== activeOrder?._id);
+
   useEffect(() => {
     activeOrderIdRef.current = activeOrder?._id || null;
   }, [orders]);
 
   const handleOpenGoogleMaps = (order) => {
+    if (!order) return;
     const isPickup = order.status === 'acceptedByRider';
-    const dest = isPickup ? order.pickupLocation : order.deliveryLocation;
-    const destLat = dest?.latitude || dest?.lat;
-    const destLng = dest?.longitude || dest?.lng;
-    const destAddress = dest?.address || '';
 
     let destinationParam = '';
-    if (destLat && destLng) {
-      destinationParam = `${destLat},${destLng}`;
-    } else if (destAddress) {
-      destinationParam = encodeURIComponent(destAddress);
-    } else if (isPickup && order.branch) {
-      const branchLat = order.branch.location?.latitude || order.branch.location?.lat;
-      const branchLng = order.branch.location?.longitude || order.branch.location?.lng;
-      if (branchLat && branchLng) {
-        destinationParam = `${branchLat},${branchLng}`;
-      } else if (order.branch.address) {
-        destinationParam = encodeURIComponent(order.branch.address);
+
+    if (isPickup) {
+      // Pickup from store/branch
+      const pLat = order.pickupLocation?.latitude || order.pickupLocation?.lat || order.branch?.location?.latitude || order.branch?.location?.lat;
+      const pLng = order.pickupLocation?.longitude || order.pickupLocation?.lng || order.branch?.location?.longitude || order.branch?.location?.lng;
+      const pAddr = order.pickupLocation?.address || order.branch?.address || order.branch?.name;
+
+      if (pLat && pLng) {
+        destinationParam = `${pLat},${pLng}`;
+      } else if (pAddr) {
+        destinationParam = encodeURIComponent(pAddr);
+      }
+    } else {
+      // Deliver to customer
+      const dLat = order.deliveryLocation?.latitude || order.deliveryLocation?.lat || order.customer?.liveLocation?.latitude;
+      const dLng = order.deliveryLocation?.longitude || order.deliveryLocation?.lng || order.customer?.liveLocation?.longitude;
+      const dAddr = order.deliveryLocation?.address || order.customer?.address;
+
+      if (dLat && dLng) {
+        destinationParam = `${dLat},${dLng}`;
+      } else if (dAddr) {
+        destinationParam = encodeURIComponent(dAddr);
       }
     }
 
-    const originParam = riderCoords ? `${riderCoords.latitude},${riderCoords.longitude}` : '';
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destinationParam}&travelmode=driving`;
+    let originParam = '';
+    if (riderCoords?.latitude && riderCoords?.longitude) {
+      originParam = `&origin=${riderCoords.latitude},${riderCoords.longitude}`;
+    }
+
+    const url = `https://www.google.com/maps/dir/?api=1${originParam}&destination=${destinationParam}&travelmode=driving`;
     window.open(url, '_blank');
   };
 
@@ -79,8 +96,12 @@ const DeliveryDashboard = () => {
     try {
       const params = {};
       if (tab) params.status = tab;
-      const { data } = await deliveryService.getAssignedOrders(params);
-      setOrders(data);
+      const [ordersRes, historyRes] = await Promise.all([
+        deliveryService.getAssignedOrders(params),
+        deliveryService.getAssignedOrders({ status: 'delivered' })
+      ]);
+      setOrders(ordersRes.data);
+      setHistoryOrders(historyRes.data);
     } catch (e) { 
       console.error(e); 
       toast.error('Failed to load orders');
@@ -179,28 +200,162 @@ const DeliveryDashboard = () => {
             label: 'Active Jobs', 
             value: orders.filter((o) => o.deliveryPartner === user?._id && !['delivered', 'cancelled'].includes(o.status)).length, 
             icon: FiTruck, 
-            color: 'text-primary' 
+            gradient: 'from-blue-500/10 to-indigo-500/5',
+            borderColor: 'border-blue-500/20',
+            iconColor: 'text-blue-500' 
           },
           { 
             label: 'Delivered', 
             value: orders.filter((o) => o.deliveryPartner === user?._id && o.status === 'delivered').length, 
             icon: FiCheck, 
-            color: 'text-success' 
+            gradient: 'from-emerald-500/10 to-teal-500/5',
+            borderColor: 'border-emerald-500/20',
+            iconColor: 'text-emerald-500' 
           },
           { 
             label: 'Earnings', 
             value: `₹${orders.filter((o) => o.deliveryPartner === user?._id && o.status === 'delivered').reduce((s, o) => s + (o.totalPrice * 0.1), 0).toFixed(0)}`, 
             icon: FiDollarSign, 
-            color: 'text-purple-500' 
+            gradient: 'from-purple-500/10 to-pink-500/5',
+            borderColor: 'border-purple-500/20',
+            iconColor: 'text-purple-500' 
           },
         ].map((s, i) => (
-          <div key={i} className="bg-white rounded-2xl p-4 border border-border/30 shadow-sm text-center">
-            <s.icon className={`w-6 h-6 mx-auto ${s.color}`} />
-            <p className="text-lg font-black text-text mt-1">{s.value}</p>
+          <div key={i} className={`bg-gradient-to-br ${s.gradient} rounded-2xl p-4 border ${s.borderColor} shadow-sm text-center transition-all hover:scale-[1.02] duration-300`}>
+            <s.icon className={`w-6 h-6 mx-auto ${s.iconColor}`} />
+            <p className="text-xl font-black text-text mt-1">{s.value}</p>
             <p className="text-[10px] font-bold text-text-secondary">{s.label}</p>
           </div>
         ))}
       </div>
+
+      {/* ── Active Delivery High-Priority Panel ── */}
+      {activeOrder && (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="mb-6 bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden"
+        >
+          {/* Decorative glowing elements */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-4">
+            <div>
+              <p className="text-[10px] font-black text-primary tracking-widest uppercase">CURRENT ACTIVE DELIVERY</p>
+              <h2 className="text-lg font-bold font-mono text-white mt-1">{activeOrder.orderId}</h2>
+            </div>
+            <div className="text-right">
+              <span className="text-xs text-slate-400 font-bold block">Estimated Earning</span>
+              <span className="text-xl font-black text-emerald-400">₹{(activeOrder.totalPrice * 0.1).toFixed(0)}</span>
+            </div>
+          </div>
+
+          {/* Stepper Progress Bar */}
+          <div className="my-6">
+            <div className="flex items-center justify-between relative mb-2">
+              {/* Connector line */}
+              <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-0.5 bg-slate-700 z-0">
+                <div 
+                  className="h-full bg-primary transition-all duration-500" 
+                  style={{
+                    width: activeOrder.status === 'acceptedByRider' ? '0%' :
+                           activeOrder.status === 'pickedUp' ? '50%' :
+                           activeOrder.status === 'outForDelivery' ? '100%' : '0%'
+                  }}
+                />
+              </div>
+
+              {[
+                { key: 'acceptedByRider', label: 'Claimed', icon: '📝' },
+                { key: 'pickedUp', label: 'At Store', icon: '📦' },
+                { key: 'outForDelivery', label: 'Delivering', icon: '🚴' }
+              ].map((step, idx) => {
+                const statuses = ['acceptedByRider', 'pickedUp', 'outForDelivery'];
+                const currentIndex = statuses.indexOf(activeOrder.status);
+                const stepIndex = statuses.indexOf(step.key);
+                const isCompleted = stepIndex < currentIndex;
+                const isActive = stepIndex === currentIndex;
+
+                return (
+                  <div key={step.key} className="flex flex-col items-center z-10">
+                    <div 
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
+                        isCompleted ? 'bg-primary text-white scale-105' :
+                        isActive ? 'bg-emerald-500 text-white animate-pulse ring-4 ring-emerald-500/20 scale-110' :
+                        'bg-slate-800 text-slate-500 border border-slate-700'
+                      }`}
+                    >
+                      {isCompleted ? '✓' : step.icon}
+                    </div>
+                    <span className={`text-[10px] font-extrabold mt-1.5 transition-colors ${
+                      isActive ? 'text-emerald-400 font-black' : 
+                      isCompleted ? 'text-primary' : 'text-slate-500'
+                    }`}>
+                      {step.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Stepper active action & maps direction details */}
+          <div className="space-y-4 bg-slate-800/50 p-4 rounded-2xl border border-white/5">
+            <div className="flex items-start gap-2.5 text-xs text-slate-300">
+              <FiMapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-extrabold text-[10px] text-slate-400 uppercase tracking-wider">
+                  {activeOrder.status === 'acceptedByRider' ? 'PICKUP FROM STORE' : 'DELIVER TO CUSTOMER'}
+                </p>
+                <p className="text-white font-bold mt-1 text-[13px]">
+                  {activeOrder.status === 'acceptedByRider' ? activeOrder.branch?.name : activeOrder.deliveryLocation?.address}
+                </p>
+                <p className="text-slate-400 mt-0.5 text-[11px]">
+                  {activeOrder.status === 'acceptedByRider' ? activeOrder.branch?.address : `Contact: ${activeOrder.customer?.name || 'Customer'}`}
+                </p>
+              </div>
+            </div>
+
+            {activeOrder.customer?.phone && (
+              <div className="flex items-center gap-2 text-xs border-t border-white/5 pt-3">
+                <FiPhone className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span className="font-bold text-slate-300">{activeOrder.customer.name} • <a href={`tel:${activeOrder.customer.phone}`} className="text-primary hover:underline">{activeOrder.customer.phone}</a></span>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2 flex-wrap sm:flex-nowrap">
+              <button
+                type="button"
+                onClick={() => handleOpenGoogleMaps(activeOrder)}
+                className="flex-1 py-3 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary-light hover:text-white text-xs font-black rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm"
+              >
+                <FiNavigation className="w-4 h-4 text-primary animate-pulse" />
+                Open Directions Map
+              </button>
+
+              {(() => {
+                const actionBtn = getActionButton(activeOrder);
+                return actionBtn && (
+                  <button
+                    onClick={() => handleAction(activeOrder._id, actionBtn.action)}
+                    disabled={processing[activeOrder._id]}
+                    className={`flex-1 py-3 ${actionBtn.color} hover:opacity-95 text-white text-xs font-black rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-60 transition-all`}
+                  >
+                    {processing[activeOrder._id] ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <actionBtn.icon className="w-4.5 h-4.5" /> {actionBtn.label}
+                      </>
+                    )}
+                  </button>
+                );
+              })()}
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide py-1">
@@ -219,19 +374,21 @@ const DeliveryDashboard = () => {
         ))}
       </div>
 
-      {/* Orders List */}
-      {loading ? (
-        <Spinner className="py-20" />
-      ) : orders.length === 0 ? (
-        <EmptyState 
-          icon="📦" 
-          title={tab === 'available' ? "No Available Offers" : "No orders found"} 
-          description={tab === 'available' ? "Orders accepted by stores will show up here for you to claim!" : "You will see your jobs here"} 
-        />
-      ) : (
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          {/* Orders List */}
+          {loading ? (
+            <Spinner className="py-20" />
+          ) : displayedOrders.length === 0 ? (
+            <EmptyState 
+              icon="📦" 
+              title={tab === 'available' ? "No Available Offers" : "No orders found"} 
+              description={tab === 'available' ? "Orders accepted by stores will show up here for you to claim!" : "You will see your jobs here"} 
+            />
+          ) : (
+            <div className="space-y-4">
           <AnimatePresence>
-            {orders.map((order, i) => {
+            {displayedOrders.map((order, i) => {
               const actionBtn = getActionButton(order);
               return (
                 <motion.div 
@@ -397,6 +554,52 @@ const DeliveryDashboard = () => {
           </AnimatePresence>
         </div>
       )}
+        </div>
+
+        {/* Right Sidebar: Completed Deals History */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-2xl border border-border/30 p-5 shadow-sm sticky top-20">
+            <h3 className="text-sm font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2">
+              📜 Completed Deals History ({historyOrders.length})
+            </h3>
+            {historyOrders.length === 0 ? (
+              <p className="text-xs text-text-tertiary text-center py-8">No completed deals in history yet.</p>
+            ) : (
+              <div className="space-y-3 max-h-[550px] overflow-y-auto pr-1 scrollbar-thin">
+                {historyOrders.map((deal) => (
+                  <div key={deal._id} className="p-3 bg-bg-secondary/40 rounded-xl border border-border/20 text-xs">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-mono font-bold text-primary">{deal.orderId}</span>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                        Delivered
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-text-secondary">
+                      Date: {new Date(deal.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    <div className="flex justify-between mt-2 pt-1.5 border-t border-border/10">
+                      <span className="text-text-secondary">Total price:</span>
+                      <span className="font-bold text-text">₹{deal.totalPrice}</span>
+                    </div>
+                    {deal.distance && (
+                      <div className="flex justify-between mt-0.5">
+                        <span className="text-text-secondary">Distance:</span>
+                        <span className="font-semibold text-text">{deal.distance} km</span>
+                      </div>
+                    )}
+                    {deal.deliveryPartnerPayout && (
+                      <div className="flex justify-between mt-0.5">
+                        <span className="text-text-secondary">Rider Payout:</span>
+                        <span className="font-bold text-success">₹{deal.deliveryPartnerPayout}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* GORGEOUS GLASSMORPHISM MODAL DIALOG */}
       <AnimatePresence>

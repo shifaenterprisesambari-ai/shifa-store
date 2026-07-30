@@ -12,18 +12,19 @@ export default defineConfig({
       // Our custom push handling lives in /public/sw.js (registered manually).
       strategies: 'generateSW',
       registerType: 'autoUpdate',
-      includeAssets: ['logo.png'],
+      includeAssets: ['logo.png', 'pwa-192x192.png', 'pwa-512x512.png', 'favicon.svg'],
       manifest: {
-        name: 'Shifa Store',
+        name: 'Shifa Store — Online Grocery & Daily Essentials Delivery',
         short_name: 'Shifa Store',
-        description: 'Your favourite grocery store — fast delivery at your doorstep',
+        description: 'Order fresh groceries, vegetables, fruits, snacks, and daily essentials online with superfast delivery from Shifa Store.',
         theme_color: '#FF7A00',
         background_color: '#FFFFFF',
         display: 'standalone',
         start_url: '/',
         icons: [
-          { src: '/logo.png', sizes: '192x192', type: 'image/png' },
-          { src: '/logo.png', sizes: '512x512', type: 'image/png' },
+          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/logo.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
       workbox: {

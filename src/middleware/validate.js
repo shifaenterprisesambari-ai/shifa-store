@@ -30,7 +30,11 @@ export const validate = (schema) => {
     const body = req.body || {};
 
     for (const [field, rules] of Object.entries(schema)) {
-      const value = body[field];
+      let value = body[field];
+      if (typeof value === "string" && field !== "password") {
+        value = value.trim();
+        body[field] = value;
+      }
 
       // Check required
       if (rules.required && (value === undefined || value === null || value === "")) {
@@ -39,7 +43,7 @@ export const validate = (schema) => {
       }
 
       // Skip optional fields that are not provided
-      if (value === undefined || value === null) continue;
+      if (value === undefined || value === null || value === "") continue;
 
       // Check type
       if (rules.type) {

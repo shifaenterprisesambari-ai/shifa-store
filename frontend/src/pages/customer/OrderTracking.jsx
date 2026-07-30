@@ -146,9 +146,13 @@ const OrderTracking = () => {
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-text">{order.deliveryPartner.name || 'Rider'}</p>
-              {order.deliveryPartner.phone && <p className="text-xs text-text-secondary">{order.deliveryPartner.phone}</p>}
+              {order.deliveryPartner.phone && ['acceptedByRider', 'pickedUp', 'outForDelivery'].includes(order.status) ? (
+                <p className="text-xs text-text-secondary">{order.deliveryPartner.phone}</p>
+              ) : (
+                <p className="text-xs text-text-tertiary italic">Contact available during delivery</p>
+              )}
             </div>
-            {order.deliveryPartner.phone && (
+            {order.deliveryPartner.phone && ['acceptedByRider', 'pickedUp', 'outForDelivery'].includes(order.status) && (
               <a href={`tel:${order.deliveryPartner.phone}`} className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center hover:bg-success/20 transition-colors">
                 <FiPhone className="w-4 h-4" />
               </a>

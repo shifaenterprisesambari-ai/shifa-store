@@ -83,6 +83,9 @@ const orderSchema= new mongoose.Schema({
       },
       platformEarnings: { type: Number, default: 0 },
       vendorPayout: { type: Number, default: 0 },
+      distance: { type: Number, default: 0 },
+      deliveryFee: { type: Number, default: 0 },
+      deliveryPartnerPayout: { type: Number, default: 0 },
       paymentMethod: {
         type: String,
         enum: ["COD", "Online"],

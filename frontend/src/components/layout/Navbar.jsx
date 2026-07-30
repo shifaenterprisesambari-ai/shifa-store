@@ -2,10 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiShoppingCart, FiBell, FiUser, FiMenu, FiX, FiLogOut, FiHeart, FiPackage, FiMapPin } from 'react-icons/fi';
+import { FiSearch, FiShoppingCart, FiBell, FiUser, FiMenu, FiX, FiLogOut, FiHeart, FiPackage, FiMapPin, FiInfo, FiChevronDown } from 'react-icons/fi';
 import { selectCartCount } from '../../store/cartSlice';
 import { toggleNotifications } from '../../store/notificationSlice';
 import { logout } from '../../store/authSlice';
+import LocationModal from './LocationModal';
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -19,6 +20,8 @@ const Navbar = () => {
   const { user, isAuthenticated } = useSelector((s) => s.auth);
   const cartCount = useSelector(selectCartCount);
   const { unreadCount } = useSelector((s) => s.notifications);
+  const { activeBranch } = useSelector((s) => s.branch);
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
 
   const getHomeLink = () => {
     if (!isAuthenticated || !user) return "/";
@@ -57,11 +60,32 @@ const Navbar = () => {
       <nav className="sticky top-0 z-50 glass border-b border-border/50">
         <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-16">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link to={getHomeLink()} className="flex items-center gap-2.5 shrink-0">
-              <img src="/logo.png" alt="Shifa Store" className="w-9 h-9 rounded-full" />
-              <span className="text-xl font-bold text-gradient hidden sm:block">Shifa Store</span>
-            </Link>
+            {/* Logo & Location Container */}
+            <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
+              {/* Logo */}
+              <Link to={getHomeLink()} className="flex items-center gap-2 shrink-0">
+                <img src="/logo.png" alt="Shifa Store" className="w-9 h-9 rounded-full shadow-xs" />
+                <span className="text-xl font-extrabold text-gradient hidden sm:block">Shifa Store</span>
+              </Link>
+
+              {/* Location Selector Pill */}
+              {isCustomerOrGuest && (
+                <button
+                  type="button"
+                  onClick={() => setLocationModalOpen(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 hover:bg-primary/15 border border-primary/20 rounded-full transition-all cursor-pointer group text-left max-w-[150px] sm:max-w-[200px]"
+                >
+                  <FiMapPin className="text-primary w-3.5 h-3.5 shrink-0 animate-pulse" />
+                  <div className="flex flex-col text-left leading-tight min-w-0">
+                    <span className="text-[8px] text-primary font-black uppercase tracking-wider">Area / Branch</span>
+                    <span className="text-[11px] font-bold text-slate-800 truncate group-hover:text-primary transition-colors">
+                      {activeBranch?.name || 'Select Branch'}
+                    </span>
+                  </div>
+                  <FiChevronDown className="text-primary/70 w-3 h-3 shrink-0 ml-0.5" />
+                </button>
+              )}
+            </div>
 
             {/* Search Bar - Desktop */}
             {isCustomerOrGuest && (
@@ -136,6 +160,7 @@ const Navbar = () => {
                         <Link to="/orders" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-text hover:bg-bg-secondary transition-colors"><FiPackage className="w-4 h-4" /> My Orders</Link>
                         <Link to="/wishlist" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-text hover:bg-bg-secondary transition-colors"><FiHeart className="w-4 h-4" /> Wishlist</Link>
                         <Link to="/addresses" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-text hover:bg-bg-secondary transition-colors"><FiMapPin className="w-4 h-4" /> Addresses</Link>
+                        <Link to="/about" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-text hover:bg-bg-secondary transition-colors"><FiInfo className="w-4 h-4" /> About Us</Link>
                         <hr className="my-1 border-border/50" />
                         <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-2.5 text-sm text-error hover:bg-red-50 w-full transition-colors"><FiLogOut className="w-4 h-4" /> Logout</button>
                       </motion.div>
@@ -170,6 +195,8 @@ const Navbar = () => {
           )}
         </AnimatePresence>
       </nav>
+
+      <LocationModal isOpen={locationModalOpen} onClose={() => setLocationModalOpen(false)} />
     </>
   );
 };

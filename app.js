@@ -6,22 +6,54 @@ import fastifySocketId from "fastify-socket.io";
 import { registerRoutes } from "./src/routes/index.js";
 import { admin, buildAdminRouter } from "./src/config/setup.js";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import jwt from "jsonwebtoken";
 
 const start = async () => {
   await connectDB(process.env.MONGO_URI);
   const app = fastify({ trustProxy: true });
 
+  // Rate Limiting Protection (Prevents Brute-Force & DDoS)
+  await app.register(rateLimit, {
+    max: 150, // max 150 requests per minute per IP
+    timeWindow: '1 minute',
+    errorResponseBuilder: (req, context) => ({
+      statusCode: 429,
+      error: 'Too Many Requests',
+      message: `Too many requests. Please wait a minute before trying again.`,
+    }),
+  });
+
+  // Dynamic Origin Whitelist for CORS
+  const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    process.env.FRONTEND_URL,
+    "https://shifastore.online",
+    "https://www.shifastore.online",
+  ].filter(Boolean);
+
+  const corsOrigin = (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+      cb(null, true);
+    } else {
+      cb(new Error("CORS origin not allowed"), false);
+    }
+  };
+
   // Register CORS
   app.register(cors, {
-    origin: "*",
+    origin: corsOrigin,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    credentials: true,
   });
 
   // Register Socket.io
   app.register(fastifySocketId, {
     cors: {
-      origin: "*",
+      origin: corsOrigin,
+      credentials: true,
     },
     pingInterval: 10000,
     pingTimeout: 5000,
@@ -80,3 +112,4 @@ const start = async () => {
 };
 
 start();
+

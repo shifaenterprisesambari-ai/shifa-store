@@ -18,6 +18,7 @@ const OrderTracking = lazy(() => import('../pages/customer/OrderTracking'));
 const Profile = lazy(() => import('../pages/customer/Profile'));
 const Search = lazy(() => import('../pages/customer/Search'));
 const Wishlist = lazy(() => import('../pages/customer/Wishlist'));
+const About = lazy(() => import('../pages/customer/About'));
 
 // Shop Owner
 const ShopDashboard = lazy(() => import('../pages/shop/Dashboard'));
@@ -28,6 +29,7 @@ const DeliveryDashboard = lazy(() => import('../pages/delivery/Dashboard'));
 
 // Admin
 const AdminDashboard = lazy(() => import('../pages/admin/Dashboard'));
+const BranchesDetails = lazy(() => import('../pages/admin/BranchesDetails'));
 
 const ProtectedRoute = ({ children, roles }) => {
   const { isAuthenticated, user, loading } = useSelector((s) => s.auth);
@@ -71,6 +73,7 @@ const AppRoutes = () => (
         <Route path="/search" element={<CustomerRoute><Search /></CustomerRoute>} />
         <Route path="/cart" element={<CustomerRoute><Cart /></CustomerRoute>} />
         <Route path="/wishlist" element={<CustomerRoute><Wishlist /></CustomerRoute>} />
+        <Route path="/about" element={<CustomerRoute><About /></CustomerRoute>} />
         <Route path="/checkout" element={<ProtectedRoute><CustomerRoute><Checkout /></CustomerRoute></ProtectedRoute>} />
         <Route path="/orders" element={<ProtectedRoute><CustomerRoute><Orders /></CustomerRoute></ProtectedRoute>} />
         <Route path="/order-tracking/:orderId" element={<ProtectedRoute><CustomerRoute><OrderTracking /></CustomerRoute></ProtectedRoute>} />
@@ -92,6 +95,8 @@ const AppRoutes = () => (
       {/* Admin Routes */}
       <Route element={<CustomerLayout />}>
         <Route path="/admin/dashboard" element={<ProtectedRoute roles={['Admin']}><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/branches-details" element={<ProtectedRoute roles={['Admin']}><BranchesDetails /></ProtectedRoute>} />
+        <Route path="/admin/branches_details" element={<ProtectedRoute roles={['Admin']}><BranchesDetails /></ProtectedRoute>} />
       </Route>
 
       {/* Catch All */}

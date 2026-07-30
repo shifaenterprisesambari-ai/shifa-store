@@ -8,8 +8,12 @@ import {
     verifyPayment,
   } from "../controllers/order/order.js";
 import { verifyToken } from "../middleware/auth.js";
-  
+import { razorpayWebhook } from "../controllers/payment/payment.js";
+
 export const orderRoutes = async (fastify, options) => {
+    // Unprotected Webhook Endpoint for Razorpay Server Events
+    fastify.post("/order/razorpay-webhook", razorpayWebhook);
+
     fastify.addHook("preHandler", async (request, reply) => {
       const isAuthenticated = await verifyToken(request, reply);
       if (!isAuthenticated) {

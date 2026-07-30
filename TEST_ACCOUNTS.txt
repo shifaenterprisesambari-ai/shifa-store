@@ -1,0 +1,145 @@
+================================================================================
+                    SHIFA STORE - TEST ACCOUNTS & CREDENTIALS
+================================================================================
+
+This file contains all registered Master Admin, Geographical Branches,
+Sub-Branch Admins, Store Owners / Merchants, Delivery Riders, and Customers.
+
+================================================================================
+1. MASTER ADMIN (Global AdminJS Portal)
+================================================================================
+Portal URL: http://localhost:3000/admin
+
+Email   : shifaenterprisesambari@gmail.com
+Password: Shifa@2025
+Role    : Master Admin (System Owner)
+Notes   : Has full authority to set profit cuts per branch/store, manage all products,
+          users, delivery partners, and orders across the entire platform.
+
+================================================================================
+2. SUB-BRANCH ADMIN ACCOUNTS
+================================================================================
+Portal URL: http://localhost:5173/ (or Login via Web App -> Redirects to /admin/dashboard)
+
+[Sub-Branch Admin 1] - Goalpara Branch Admin
+Email   : shifagoalparaadmin@gmail.com
+Password: Goalpara@2026
+Role    : Branch Admin
+Branch  : Goalpara Branch (Goalpara, Assam)
+
+================================================================================
+3. STORES / MERCHANT SHOP OWNERS (by Branch)
+================================================================================
+Portal URL: http://localhost:5173/ (Login via Web App -> Redirects to /shop/dashboard)
+
+--------------------------------------------------------------------------------
+A. STORES UNDER "GOALPARA BRANCH"
+--------------------------------------------------------------------------------
+[Store 1] - Goalpara Grocery Store
+Store Name: Goalpara Grocery Store
+Owner Name: Goalpara Shop Owner
+Email     : goalparagrocery@gmail.com
+Phone     : 9876543211
+Password  : GoalparaShop@2026
+ID Number : SO-1007
+Branch    : Goalpara Branch (Goalpara, Assam)
+
+--------------------------------------------------------------------------------
+B. STORES UNDER "SHIFA STORE (AMBARI BRANCH)"
+--------------------------------------------------------------------------------
+[Store 2] - NUR SALIMA's CAFE & RESTAURANT
+Store Name: NUR SALIMA's CAFE & RESTAURANT
+Owner Name: NUR SALIMA
+Email     : nursalimasiddika@gmail.com
+Phone     : 9954103673
+Password  : Nur@2026
+ID Number : SO-1001
+Branch    : SHIFA STORE (Ambari, Assam)
+
+[Store 3] - BISMILLAH RESTAURANT
+Store Name: BISMILLAH RESTAURANT
+Owner Name: SAIFUL ISLAM
+Email     : saifulislam875395@gmail.com
+Phone     : 8638973605
+Password  : Saiful@2026
+ID Number : SO-1002
+Branch    : SHIFA STORE (Ambari, Assam)
+
+[Store 4] - Azad Pan Bandar
+Store Name: Azad pan bandar
+Owner Name: AZIDUL HOQUE
+Email     : ajidulhoque160@gmail.com
+Phone     : 9395448149
+Password  : Azidul@2026
+ID Number : SO-1003
+Branch    : SHIFA STORE (Ambari, Assam)
+
+[Store 5] - Wahidul Store
+Store Name: Wahidul store
+Owner Name: Wahidul islam
+Email     : whaidulislam1234@gmail.com
+Phone     : 8471894662
+Password  : Wahidul@2026
+ID Number : SO-1004
+Branch    : SHIFA STORE (Ambari, Assam)
+
+[Store 6] - Test Store (Habibur Rohman)
+Store Name: Test
+Owner Name: Habibur Rohman
+Email     : leerohman611@gmail.com
+Phone     : 84028444690
+Password  : hrohman090
+ID Number : SO-1005
+Branch    : SHIFA STORE (Ambari, Assam)
+
+[Store 7] - Shifa General Store
+Store Name: Shifa General Store
+Owner Name: Test Shop Owner
+Phone     : 9876543210
+Password  : password
+ID Number : SO-1006
+Branch    : SHIFA STORE (Ambari, Assam)
+
+================================================================================
+4. DELIVERY PARTNERS (Riders)
+================================================================================
+[Rider 1] - Standard Test Delivery Partner
+Name     : Test Delivery Partner
+Phone    : 9876543211
+Password : password
+ID Number: DP-1001
+Branch   : SHIFA STORE (AMBARI)
+
+[Rider 2] - Goalpara Rider
+Name     : Goalpara Rider
+Email    : goalpararider@gmail.com
+Phone    : 9876543222
+Password : Rider@2026
+ID Number: GP-RIDER-001
+Branch   : Goalpara Branch
+
+[Rider 3] - Test Rider 1
+Name     : Test Rider
+Email    : 84028444690testrider1@test.com
+Phone    : 9876500001
+Password : HR123456789password123
+ID Number: DP-1003
+Branch   : Ambari Branch
+
+================================================================================
+5. CUSTOMER ACCOUNTS
+================================================================================
+[Customer 1] - Standard Test Customer
+Phone    : 9876543212
+Password : password
+
+[Customer 2] - Goalpara Customer
+Email    : goalparacustomer@gmail.com
+Phone    : 9876543233
+Password : Customer@2026
+
+[Customer 3] - Izarul Islam
+Email    : izarul371@gmail.com
+Phone    : 9181936706
+
+================================================================================

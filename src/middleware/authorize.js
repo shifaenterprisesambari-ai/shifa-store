@@ -16,6 +16,12 @@ export const authorize = (...roles) => {
       return reply.status(401).send({ message: "Authentication required" });
     }
     if (!roles.includes(req.user.role)) {
+      console.log("AUTHORIZATION FAILED:", {
+        user: req.user,
+        requiredRoles: roles,
+        url: req.raw?.url,
+        method: req.raw?.method
+      });
       return reply
         .status(403)
         .send({ message: "Forbidden: Insufficient permissions" });

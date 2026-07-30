@@ -10,7 +10,9 @@ const userSchema = new mongoose.Schema({
         enum: ["Customer", "Admin", "DeliveryPartner", "ShopOwner"],
         required: true,
     },
-    isActivated: {type: Boolean, default: false}
+    isActivated: {type: Boolean, default: false},
+    resetPasswordOtp: { type: String },
+    resetPasswordOtpExpires: { type: Date }
 })
 
 // Customer Schema
@@ -22,7 +24,12 @@ const customerSchema = new mongoose.Schema({
     password: { type: String },
     plainPassword: { type: String },
     googleId: { type: String, unique: true, sparse: true },
+    profileImage: { type: String },
     role: { type: String, enum: ["Customer"], default: "Customer" },
+    branch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
+    },
     liveLocation: {
       latitude: { type: Number },
       longitude: { type: Number },
@@ -35,17 +42,20 @@ const customerSchema = new mongoose.Schema({
       longitude: { type: Number },
       isDefault: { type: Boolean, default: false },
     }],
-    resetPasswordOtp: { type: String },
-    resetPasswordOtpExpires: { type: Date },
+    wishlist: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+    }],
 })
 
 // Delivery Partner Schema
 const deliveryPartnerSchema = new mongoose.Schema({
     ...userSchema.obj,
-    email: { type: String, required: true, unique: true },
+    email: { type: String, unique: true, sparse: true },
     password: { type: String, required: true },
     plainPassword: { type: String },
-    phone: { type: Number, required: true },
+    phone: { type: Number, required: true, unique: true },
+    idNumber: { type: String, unique: true, sparse: true },
     role: { type: String, enum: ["DeliveryPartner"], default: "DeliveryPartner" },
     liveLocation: {
       latitude: { type: Number },
@@ -63,10 +73,11 @@ const deliveryPartnerSchema = new mongoose.Schema({
 
 const shopOwnerSchema = new mongoose.Schema({
     ...userSchema.obj,
-    email: { type: String, required: true, unique: true },
+    email: { type: String, unique: true, sparse: true },
     password: { type: String, required: true },
     plainPassword: { type: String },
-    phone: { type: Number },
+    phone: { type: Number, required: true, unique: true },
+    idNumber: { type: String, unique: true, sparse: true },
     role: { type: String, enum: ["ShopOwner"], default: "ShopOwner" },
     branch: {
       type: mongoose.Schema.Types.ObjectId,
@@ -77,6 +88,9 @@ const shopOwnerSchema = new mongoose.Schema({
     shopName: { type: String },       // owner's own store brand name
     shopImage: { type: String },      // owner's own store photo/logo URL
     shopAddress: { type: String },    // owner's own store address
+    isClosed: { type: Boolean, default: false },
+    totalSold: { type: Number, default: 0 },
+    commissionPercentage: { type: Number, default: 10, min: 0, max: 100 }
 });
 
 // Admin Schema
@@ -84,8 +98,13 @@ const shopOwnerSchema = new mongoose.Schema({
 const adminSchema = new mongoose.Schema({
     ...userSchema.obj,
     email: { type: String, required: true, unique: true },
+    phone: { type: Number, unique: true, sparse: true },
     password: { type: String, required: true },
     role: { type: String, enum: ["Admin"], default: "Admin" },
+    branch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
+    },
 });
 
 // Hook to automatically hash passwords before saving
@@ -105,6 +124,33 @@ const hashPasswordHook = async function (next) {
   }
   next();
 };
+
+const generateDeliveryPartnerIdHook = async function (next) {
+  if (!this.idNumber) {
+    try {
+      const count = await this.constructor.countDocuments();
+      this.idNumber = `DP-${1001 + count}`;
+    } catch (err) {
+      return next(err);
+    }
+  }
+  next();
+};
+
+const generateShopOwnerIdHook = async function (next) {
+  if (!this.idNumber) {
+    try {
+      const count = await this.constructor.countDocuments();
+      this.idNumber = `SO-${1001 + count}`;
+    } catch (err) {
+      return next(err);
+    }
+  }
+  next();
+};
+
+deliveryPartnerSchema.pre("save", generateDeliveryPartnerIdHook);
+shopOwnerSchema.pre("save", generateShopOwnerIdHook);
 
 customerSchema.pre("save", hashPasswordHook);
 deliveryPartnerSchema.pre("save", hashPasswordHook);

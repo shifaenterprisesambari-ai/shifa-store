@@ -2,15 +2,23 @@ import { motion } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { FiPlus, FiMinus, FiHeart } from 'react-icons/fi';
 import { addToCart, incrementQty, decrementQty, selectCartItems } from '../store/cartSlice';
-import { toggleWishlist, selectIsWishlisted } from '../store/wishlistSlice';
+import { toggleWishlist, toggleWishlistAsync, selectIsWishlisted } from '../store/wishlistSlice';
 
 const ProductCard = ({ product, index = 0 }) => {
   const dispatch = useDispatch();
   const cartItems = useSelector(selectCartItems);
+  const { isAuthenticated } = useSelector((s) => s.auth);
   const isWishlisted = useSelector(selectIsWishlisted(product._id || product.id));
   const cartItem = cartItems.find((i) => i._id === product._id);
   const discount = product.discountPrice && product.discountPrice > product.price
     ? Math.round(((product.discountPrice - product.price) / product.discountPrice) * 100) : 0;
+
+  const handleToggleWishlist = () => {
+    dispatch(toggleWishlist(product));
+    if (isAuthenticated) {
+      dispatch(toggleWishlistAsync(product));
+    }
+  };
 
   return (
     <motion.div
@@ -22,7 +30,7 @@ const ProductCard = ({ product, index = 0 }) => {
     >
       {/* Wishlist */}
       <button
-        onClick={() => dispatch(toggleWishlist(product))}
+        onClick={handleToggleWishlist}
         className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 z-10 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform cursor-pointer"
       >
         <FiHeart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${isWishlisted ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} />
@@ -40,23 +48,31 @@ const ProductCard = ({ product, index = 0 }) => {
         <motion.img
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
+          className={`w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-300 ${product.shop?.isClosed ? 'grayscale opacity-60' : ''}`}
           loading="lazy"
           onError={(e) => { e.target.src = '/logo.png'; }}
         />
+        {product.shop?.isClosed && (
+          <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
+            <span className="bg-error text-white text-[9px] sm:text-xs font-black uppercase px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg tracking-wider shadow-md">
+              Shop Offline
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Content */}
       <div className="p-2 sm:p-3 flex-1 flex flex-col justify-between">
         <div>
-          {/* Delivery time */}
           <div className="flex items-center gap-1 mb-1 sm:mb-1.5">
-            <span className="text-[9px] sm:text-[10px] font-medium text-text-tertiary bg-bg-secondary px-1.5 py-0.5 rounded">
-              ⚡ {product.deliveryTime || '15 min'}
-            </span>
             {product.rating && (
               <span className="text-[9px] sm:text-[10px] font-medium text-text-tertiary bg-bg-secondary px-1.5 py-0.5 rounded">
                 ⭐ {product.rating}
+              </span>
+            )}
+            {product.totalSold > 0 && (
+              <span className="text-[9px] sm:text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                📈 {product.totalSold} sold
               </span>
             )}
           </div>
@@ -75,7 +91,11 @@ const ProductCard = ({ product, index = 0 }) => {
             )}
           </div>
 
-          {cartItem ? (
+          {product.shop?.isClosed ? (
+            <span className="text-[10px] sm:text-xs font-bold text-error bg-error/10 border border-error/20 px-2.5 py-1.5 rounded-lg">
+              Offline
+            </span>
+          ) : cartItem ? (
             <div className="flex items-center gap-0.5 sm:gap-1 bg-primary rounded-lg overflow-hidden">
               <motion.button whileTap={{ scale: 0.85 }} onClick={() => dispatch(decrementQty(product._id))} className="px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-white hover:bg-primary-dark transition-colors cursor-pointer">
                 <FiMinus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />

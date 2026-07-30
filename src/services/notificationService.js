@@ -1,6 +1,6 @@
 import Notification from "../models/notification.js";
 import webpush from "web-push";
-import { sendWhatsApp } from "./whatsappService.js";
+import { sendSMS } from "./fast2smsService.js";
 import { Customer, ShopOwner, DeliveryPartner } from "../models/user.js";
 
 // Configure VAPID keys if set in environment
@@ -84,9 +84,9 @@ export const createNotification = async ({
       console.error("Web push error:", e.message)
     );
 
-    // 4. WhatsApp (background, non-blocking)
-    sendWhatsAppNotification(recipient, recipientModel, title, message).catch((e) =>
-      console.error("WhatsApp error:", e.message)
+    // 4. Fast2SMS (background, non-blocking)
+    sendSMSNotification(recipient, recipientModel, title, message).catch((e) =>
+      console.error("SMS notification error:", e.message)
     );
 
     return notification;
@@ -141,4 +141,12 @@ async function sendWhatsAppNotification(recipient, recipientModel, title, messag
 
   const whatsappText = `*${title}*\n${message}\n\n_Shifa Store_`;
   await sendWhatsApp(phone, whatsappText);
+}
+
+async function sendSMSNotification(recipient, recipientModel, title, message) {
+  const phone = await getPhoneForUser(recipient, recipientModel);
+  if (!phone) return;
+
+  const smsText = `${title}: ${message}`;
+  await sendSMS({ phone, message: smsText });
 }

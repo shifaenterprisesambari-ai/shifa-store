@@ -48,12 +48,20 @@ export const getDashboardStats = async (req, reply) => {
       Order.countDocuments(orderQuery),
       Order.aggregate([
         { $match: matchQuery },
-        { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } },
+        { 
+          $group: { 
+            _id: null, 
+            totalRevenue: { $sum: "$totalPrice" },
+            totalEarnings: { $sum: "$vendorPayout" }
+          } 
+        },
       ]),
     ]);
 
     const totalRevenue =
       revenueResult.length > 0 ? revenueResult[0].totalRevenue : 0;
+    const totalEarnings =
+      revenueResult.length > 0 ? (revenueResult[0].totalEarnings || Math.round(totalRevenue * 0.9)) : 0;
 
     // Build a store-info object using the owner's own personal fields first,
     // falling back to the shared branch data for location/address.
@@ -64,12 +72,17 @@ export const getDashboardStats = async (req, reply) => {
       address: shopOwner.shopAddress || branchDoc?.address || null,
       location: branchDoc?.location || null,
       branchId: branchId || null,
+      isClosed: shopOwner.isClosed || false,
+      commissionPercentage: shopOwner.commissionPercentage !== undefined
+        ? shopOwner.commissionPercentage
+        : (branchDoc?.commissionPercentage !== undefined ? branchDoc.commissionPercentage : 10),
     };
 
     return reply.send({
       products: {
         total: totalProducts,
         active: activeProducts,
+        totalSold: shopOwner.totalSold || 0,
       },
       orders: {
         total: totalOrders,
@@ -78,6 +91,7 @@ export const getDashboardStats = async (req, reply) => {
         delivered: deliveredOrders,
       },
       revenue: totalRevenue,
+      earnings: totalEarnings,
       branch: storeInfo,
     });
   } catch (error) {
@@ -94,7 +108,7 @@ export const getDashboardStats = async (req, reply) => {
 export const updateShopSettings = async (req, reply) => {
   try {
     const { userId } = req.user;
-    const { name, address, image, latitude, longitude } = req.body;
+    const { name, address, image, latitude, longitude, isClosed } = req.body;
 
     const shopOwner = await ShopOwner.findById(userId);
     if (!shopOwner) {
@@ -106,6 +120,7 @@ export const updateShopSettings = async (req, reply) => {
     if (name !== undefined) shopOwner.shopName = name;
     if (address !== undefined) shopOwner.shopAddress = address;
     if (image !== undefined) shopOwner.shopImage = image;
+    if (isClosed !== undefined) shopOwner.isClosed = isClosed;
     await shopOwner.save();
 
     // Also update branch location coordinates if provided (branch = physical location, shared is fine)
@@ -125,6 +140,7 @@ export const updateShopSettings = async (req, reply) => {
         name: shopOwner.shopName,
         image: shopOwner.shopImage,
         address: shopOwner.shopAddress,
+        isClosed: shopOwner.isClosed,
       },
     });
   } catch (error) {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import store from './store/store';
 import AppRoutes from './routes/AppRoutes';
 import SplashScreen from './components/SplashScreen';
@@ -11,6 +11,11 @@ import { fetchUser } from './store/authSlice';
 import { setNotifications, addNotification } from './store/notificationSlice';
 import { notificationService } from './services/notificationService';
 import { subscribeUserToPush } from './services/pushNotification';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+import { fetchWishlist, syncWishlistAsync } from './store/wishlistSlice';
+
+const GOOGLE_CLIENT_ID = "1096015868047-imd9e2m46trkc0q1n1ueuqm33mbb7tga.apps.googleusercontent.com";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 2, refetchOnWindowFocus: false, staleTime: 30000 } },
@@ -23,6 +28,9 @@ const AppInit = ({ children }) => {
   useEffect(() => {
     if (isAuthenticated) {
       dispatch(fetchUser());
+      dispatch(syncWishlistAsync()).then(() => {
+        dispatch(fetchWishlist());
+      });
     }
   }, [isAuthenticated]);
 
@@ -38,6 +46,11 @@ const AppInit = ({ children }) => {
       // Listen for real-time notifications
       socketService.onNotification((notification) => {
         dispatch(addNotification(notification));
+        toast(notification.message || notification.title, {
+          icon: '🔔',
+          duration: 5000,
+          style: { background: '#101827', color: '#fff', borderRadius: '12px', border: '1px solid #374151' }
+        });
       });
 
       // Load existing notifications
@@ -62,28 +75,30 @@ const App = () => {
   const [splashDone, setSplashDone] = useState(false);
 
   return (
-    <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          {!splashDone ? (
-            <SplashScreen onComplete={() => setSplashDone(true)} />
-          ) : (
-            <AppInit>
-              <AppRoutes />
-              <Toaster
-                position="top-center"
-                toastOptions={{
-                  duration: 3000,
-                  style: { background: '#1A1A1A', color: '#fff', borderRadius: '12px', fontSize: '14px', fontWeight: '500', padding: '12px 20px' },
-                  success: { iconTheme: { primary: '#22C55E', secondary: '#fff' } },
-                  error: { iconTheme: { primary: '#EF4444', secondary: '#fff' } },
-                }}
-              />
-            </AppInit>
-          )}
-        </BrowserRouter>
-      </QueryClientProvider>
-    </Provider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            {!splashDone ? (
+              <SplashScreen onComplete={() => setSplashDone(true)} />
+            ) : (
+              <AppInit>
+                <AppRoutes />
+                <Toaster
+                  position="top-center"
+                  toastOptions={{
+                    duration: 3000,
+                    style: { background: '#1A1A1A', color: '#fff', borderRadius: '12px', fontSize: '14px', fontWeight: '500', padding: '12px 20px' },
+                    success: { iconTheme: { primary: '#22C55E', secondary: '#fff' } },
+                    error: { iconTheme: { primary: '#EF4444', secondary: '#fff' } },
+                  }}
+                />
+              </AppInit>
+            )}
+          </BrowserRouter>
+        </QueryClientProvider>
+      </Provider>
+    </GoogleOAuthProvider>
   );
 };
 

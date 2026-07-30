@@ -3,6 +3,7 @@ import Order from "../../models/order.js";
 import Branch from "../../models/branch.js";
 import Product from "../../models/products.js";
 import { Customer, DeliveryPartner, ShopOwner } from "../../models/user.js";
+import Config from "../../models/config.js";
 import { createNotification } from "../../services/notificationService.js";
 import { verifyOtp } from "../../services/otpService.js";
 import { syncParentOrderStatus } from "../../services/orderSyncService.js";
@@ -24,6 +25,23 @@ const getRazorpay = () => {
   return razorpayInstance;
 };
 
+const deg2rad = (deg) => deg * (Math.PI / 180);
+
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in km
+};
+
 
 export const createOrder = async(req,reply)=>{
     console.log("POST /order request received! Body:", req.body);
@@ -38,13 +56,6 @@ export const createOrder = async(req,reply)=>{
         const { userId, role } = req.user;
         const { items, branch, totalPrice, paymentMethod = "COD" } = req.body;
 
-        // Check for minimum order value of ₹149
-        if (Number(totalPrice) < 149) {
-            return reply.status(400).send({
-                message: "Minimum order value is ₹149. Please add more items to place your order.",
-            });
-        }
-
         // Only customers can place orders
         if (role && role !== "Customer") {
             return reply.status(403).send({
@@ -56,6 +67,9 @@ export const createOrder = async(req,reply)=>{
 
         // Resolve branch: check if it's a direct branch ID, shopOwner ID, or matching a shopOwner's shop field
         let branchId = branch;
+        if (branch && typeof branch === "object") {
+            branchId = branch.branch?._id || branch.branch || branch._id;
+        }
         let branchData = await Branch.findById(branchId);
 
         if (!branchData && branchId) {
@@ -86,6 +100,22 @@ export const createOrder = async(req,reply)=>{
                 message: "Customer account not found. Please log out and log in again.",
                 hint: "Your session may be outdated. Try logging out and signing in again.",
                 userId,
+            });
+        }
+
+        // Mandatory Details Check: Phone & Delivery Address
+        const reqPhone = req.body.contactPhone || customerData.phone;
+        const reqAddress = req.body.deliveryLocation?.address || customerData.address || customerData.addresses?.[0]?.address;
+
+        if (!reqPhone) {
+            return reply.status(400).send({
+                message: "Mobile phone number is mandatory before placing an order. Please provide your phone number at checkout.",
+            });
+        }
+
+        if (!reqAddress || String(reqAddress).trim().length === 0) {
+            return reply.status(400).send({
+                message: "Delivery address is mandatory before placing an order. Please enter your address at checkout.",
             });
         }
 
@@ -124,6 +154,19 @@ export const createOrder = async(req,reply)=>{
             };
         });
 
+        // Check if any shop owner associated with the products in the order is closed
+        for (const item of itemsWithShopOwner) {
+            const shopOwnerId = item.shopOwnerId;
+            if (shopOwnerId && shopOwnerId !== "unknown" && mongoose.isValidObjectId(shopOwnerId)) {
+                const shopOwner = await ShopOwner.findById(shopOwnerId);
+                if (shopOwner && shopOwner.isClosed) {
+                    return reply.status(400).send({
+                        message: `The shop "${shopOwner.shopName || 'Partner Shop'}" is currently offline/closed. You cannot place an order from this shop right now.`,
+                    });
+                }
+            }
+        }
+
         // Group items by shopOwnerId
         const groups = {};
         for (const item of itemsWithShopOwner) {
@@ -147,19 +190,52 @@ export const createOrder = async(req,reply)=>{
             overallSubtotal += subtotal;
         }
 
+        // Check for minimum order value of ₹149
+        if (Number(overallSubtotal) < 149) {
+            return reply.status(400).send({
+                message: "Minimum order value is ₹149. Please add more items to place your order.",
+            });
+        }
+
+        // Retrieve rider pay per km from settings config
+        const Config = mongoose.model("Config");
+        const riderPayPerKmDoc = await Config.findOne({ key: "rider_pay_per_km" });
+        const riderPayPerKm = riderPayPerKmDoc ? Number(riderPayPerKmDoc.value) : 3.5; // default 3.5 per km
+
+        const deliveryLat = req.body.deliveryLocation?.latitude || customerData.liveLocation?.latitude || branchData?.location?.latitude || 26.100511;
+        const deliveryLng = req.body.deliveryLocation?.longitude || customerData.liveLocation?.longitude || branchData?.location?.longitude || 90.41108;
+        
+        const pickupLat = branchData?.location?.latitude || 26.100511;
+        const pickupLng = branchData?.location?.longitude || 90.41108;
+
+        const distance = calculateDistance(pickupLat, pickupLng, deliveryLat, deliveryLng) || 1;
+
+        // 15 KM Maximum Delivery Distance Limit Check
+        const hasCustomerCoords = (req.body.deliveryLocation?.latitude && req.body.deliveryLocation?.longitude) || (customerData.liveLocation?.latitude && customerData.liveLocation?.longitude);
+        const hasBranchCoords = branchData?.location?.latitude && branchData?.location?.longitude;
+
+        if (hasCustomerCoords && hasBranchCoords) {
+            const exactBranchDistance = calculateDistance(
+                branchData.location.latitude,
+                branchData.location.longitude,
+                req.body.deliveryLocation?.latitude || customerData.liveLocation?.latitude,
+                req.body.deliveryLocation?.longitude || customerData.liveLocation?.longitude
+            );
+            if (exactBranchDistance > 15) {
+                return reply.status(400).send({
+                    message: `Delivery location is ${Math.round(exactBranchDistance * 10) / 10} km away from ${branchData.name || 'the branch'}. Orders are only allowed within our 15 km service radius.`,
+                });
+            }
+        }
+
+        const deliveryFee = Math.round(distance * 5);
+        const deliveryPartnerPayout = Math.round(distance * riderPayPerKm);
+        const parentTotalPrice = overallSubtotal + deliveryFee;
+
         const groupTotalPrices = {};
         const groupKeys = Object.keys(groups);
-        let distributedSum = 0;
-        for (let i = 0; i < groupKeys.length; i++) {
-            const key = groupKeys[i];
-            if (i === groupKeys.length - 1) {
-                groupTotalPrices[key] = Math.max(0, totalPrice - distributedSum);
-            } else {
-                const proportion = overallSubtotal > 0 ? (groupSubtotals[key] / overallSubtotal) : (1 / groupKeys.length);
-                const share = Math.round(proportion * totalPrice);
-                groupTotalPrices[key] = share;
-                distributedSum += share;
-            }
+        for (const key of groupKeys) {
+            groupTotalPrices[key] = groupSubtotals[key];
         }
 
         const parentMappedItems = resolvedItemsWithProducts.map(resolved => ({
@@ -174,20 +250,23 @@ export const createOrder = async(req,reply)=>{
             customer: userId,
             items: parentMappedItems,
             branch: branchId,
-            totalPrice: totalPrice,
+            totalPrice: parentTotalPrice,
+            distance: Math.round(distance * 100) / 100,
+            deliveryFee,
+            deliveryPartnerPayout,
             status: "pending",
             isParent: true,
             parentOrder: null,
             paymentMethod: isOnline ? "Online" : "COD",
             paymentStatus: isOnline ? "unpaid" : "COD",
             deliveryLocation: {
-                latitude: req.body.deliveryLocation?.latitude || customerData.liveLocation?.latitude || branchData?.location?.latitude || 26.100511,
-                longitude: req.body.deliveryLocation?.longitude || customerData.liveLocation?.longitude || branchData?.location?.longitude || 90.41108,
+                latitude: deliveryLat,
+                longitude: deliveryLng,
                 address: req.body.deliveryLocation?.address || customerData.address || "No address available",
             },
             pickupLocation: {
-                latitude: branchData?.location?.latitude || 26.100511,
-                longitude: branchData?.location?.longitude || 90.41108,
+                latitude: pickupLat,
+                longitude: pickupLng,
                 address: branchData?.address || "No address available",
             },
         });
@@ -195,7 +274,7 @@ export const createOrder = async(req,reply)=>{
         let razorpayOrder = null;
         if (isOnline) {
             const options = {
-                amount: Math.round(totalPrice * 100), // in paise
+                amount: Math.round(parentTotalPrice * 100), // in paise
                 currency: "INR",
                 receipt: `receipt_${parentOrder._id}`,
             };
@@ -213,12 +292,36 @@ export const createOrder = async(req,reply)=>{
             { path: "items.item" },
         ]);
 
+        // Fetch default platform commission configuration
+        const shopCommissionConfig = await Config.findOne({ key: "shop_commission_percentage" });
+        const defaultCommissionRate = (shopCommissionConfig && shopCommissionConfig.value !== undefined)
+            ? Number(shopCommissionConfig.value) / 100
+            : 0.10; // default 10% fallback
+
         const createdOrders = [];
         const io = req.server.io;
 
         for (const key of groupKeys) {
             const groupItems = groups[key];
             const orderShopOwner = key !== "unknown" ? new mongoose.Types.ObjectId(key) : undefined;
+
+            let specificCommissionPct = undefined;
+            if (orderShopOwner) {
+                const ownerDoc = await ShopOwner.findById(orderShopOwner).select("commissionPercentage").lean();
+                if (ownerDoc && ownerDoc.commissionPercentage !== undefined) {
+                    specificCommissionPct = ownerDoc.commissionPercentage;
+                }
+            }
+            if (specificCommissionPct === undefined && branchId) {
+                const branchDoc = await Branch.findById(branchId).select("commissionPercentage").lean();
+                if (branchDoc && branchDoc.commissionPercentage !== undefined) {
+                    specificCommissionPct = branchDoc.commissionPercentage;
+                }
+            }
+
+            const activeCommissionRate = (specificCommissionPct !== undefined)
+                ? Number(specificCommissionPct) / 100
+                : defaultCommissionRate;
 
             const mappedGroupItems = groupItems.map(item => ({
                 id: item.itemId,
@@ -227,7 +330,7 @@ export const createOrder = async(req,reply)=>{
             }));
 
             const groupTotalPrice = groupTotalPrices[key];
-            const platformEarnings = Math.round(groupTotalPrice * 0.10 * 100) / 100;
+            const platformEarnings = Math.round(groupTotalPrice * activeCommissionRate * 100) / 100;
             const vendorPayout = groupTotalPrice - platformEarnings;
 
             const childOrder = new Order({

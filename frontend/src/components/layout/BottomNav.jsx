@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiHome, FiSearch, FiShoppingCart, FiHeart, FiUser } from 'react-icons/fi';
+import { FiHome, FiSearch, FiShoppingCart, FiHeart, FiUser, FiInfo } from 'react-icons/fi';
 import { useSelector } from 'react-redux';
 import { selectCartCount } from '../../store/cartSlice';
 
@@ -9,6 +9,7 @@ const tabs = [
   { to: '/search', icon: FiSearch, label: 'Search' },
   { to: '/cart', icon: FiShoppingCart, label: 'Cart', badge: true },
   { to: '/wishlist', icon: FiHeart, label: 'Wishlist' },
+  { to: '/about', icon: FiInfo, label: 'About' },
   { to: '/profile', icon: FiUser, label: 'Profile' },
 ];
 

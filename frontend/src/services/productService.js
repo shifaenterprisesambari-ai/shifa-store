@@ -5,4 +5,5 @@ export const productService = {
   getProductsByCategory: (categoryId) => api.get(`/products/${categoryId}`),
   getStores: () => api.get('/stores'),
   getStoreProducts: (branchId) => api.get(`/stores/${branchId}/products`),
+  getBranches: () => api.get('/branches'),
 };
