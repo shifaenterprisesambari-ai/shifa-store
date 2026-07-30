@@ -30,15 +30,21 @@ const start = async () => {
     "http://localhost:3000",
     "http://127.0.0.1:5173",
     process.env.FRONTEND_URL,
+    "https://shifa-store.vercel.app",
     "https://shifastore.online",
     "https://www.shifastore.online",
   ].filter(Boolean);
 
   const corsOrigin = (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      origin.endsWith(".vercel.app") ||
+      process.env.NODE_ENV !== "production"
+    ) {
       cb(null, true);
     } else {
-      cb(new Error("CORS origin not allowed"), false);
+      cb(new Error("CORS Policy: Origin Not Allowed"), false);
     }
   };
 

@@ -42,7 +42,7 @@ const Home = () => {
     loadData();
     const interval = setInterval(() => setActiveBanner((p) => (p + 1) % HERO_BANNERS.length), 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeBranch?._id]);
 
   useEffect(() => {
     if (!activeBranch) {
@@ -53,28 +53,31 @@ const Home = () => {
   }, [activeBranch]);
 
   const loadData = async () => {
+    setLoading(true);
     try {
       const { data: cats } = await productService.getCategories();
-      setCategories(cats);
+      setCategories(cats || []);
 
       // Load real branches (stores)
       try {
         const { data: realStores } = await productService.getStores();
-        setStores(realStores);
+        setStores(realStores || []);
       } catch (e) {
         console.error('Failed to load stores:', e);
       }
 
       // Load products for each category
       const productsMap = {};
-      await Promise.all(
-        cats.map(async (cat) => {
-          try {
-            const { data } = await productService.getProductsByCategory(cat._id);
-            productsMap[cat._id] = data;
-          } catch { productsMap[cat._id] = []; }
-        })
-      );
+      if (cats && cats.length > 0) {
+        await Promise.all(
+          cats.map(async (cat) => {
+            try {
+              const { data } = await productService.getProductsByCategory(cat._id, activeBranch?._id);
+              productsMap[cat._id] = data || [];
+            } catch { productsMap[cat._id] = []; }
+          })
+        );
+      }
       setProductsByCategory(productsMap);
     } catch (e) {
       console.error('Failed to load data:', e);

@@ -19,17 +19,17 @@ const LocationModal = ({ isOpen, onClose }) => {
   const [autoAttempted, setAutoAttempted] = useState(false);
 
   useEffect(() => {
-    if (isOpen && branches.length === 0) {
+    if (isOpen && branches.length === 0 && !loading) {
       loadBranches();
     }
-  }, [isOpen, branches]);
+  }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && !activeBranch && !autoAttempted) {
+    if (isOpen && !activeBranch && !autoAttempted && branches.length > 0) {
       setAutoAttempted(true);
       handleAutoDetect();
     }
-  }, [isOpen, activeBranch, autoAttempted]);
+  }, [isOpen, activeBranch, autoAttempted, branches.length]);
 
   const loadBranches = async () => {
     setLoading(true);
