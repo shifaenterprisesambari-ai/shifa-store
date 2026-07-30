@@ -262,65 +262,71 @@ const MapLocationPicker = ({
           </form>
         </div>
 
-        {/* Leaflet Map Canvas */}
-        <div className="flex-1 flex flex-col relative min-h-[300px] sm:min-h-[360px] bg-bg-secondary z-0">
-          <MapContainer
-            center={[coords.lat, coords.lng]}
-            zoom={16}
-            scrollWheelZoom={true}
-            style={{ width: '100%', height: '360px' }}
-            className="z-0"
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <MapController
-              coords={coords}
-              setCoords={setCoords}
-              performReverseGeocode={performReverseGeocode}
-            />
-          </MapContainer>
+        {/* Scrollable Content Container */}
+        <div className="flex-1 overflow-y-auto flex flex-col z-0">
+          {/* Leaflet Map Canvas */}
+          <div className="relative h-[220px] sm:h-[260px] shrink-0 bg-bg-secondary z-0">
+            <MapContainer
+              center={[coords.lat, coords.lng]}
+              zoom={16}
+              scrollWheelZoom={true}
+              style={{ width: '100%', height: '100%' }}
+              className="z-0"
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <MapController
+                coords={coords}
+                setCoords={setCoords}
+                performReverseGeocode={performReverseGeocode}
+              />
+            </MapContainer>
 
-          {/* Floating Helper Pill */}
-          <div className="absolute bottom-3 left-3 z-[400] text-[10.5px] bg-black/80 text-white px-3 py-1.5 rounded-xl font-bold backdrop-blur-md shadow-lg flex items-center gap-1.5 pointer-events-none">
-            📍 Drag red pin or click map to set delivery location
+            {/* Floating Helper Pill */}
+            <div className="absolute bottom-3 left-3 z-[400] text-[10.5px] bg-black/80 text-white px-3 py-1.5 rounded-xl font-bold backdrop-blur-md shadow-lg flex items-center gap-1.5 pointer-events-none">
+              📍 Drag red pin or click map to set delivery location
+            </div>
+          </div>
+
+          {/* Selected Address Display */}
+          <div className="p-4 bg-white space-y-3 flex-1">
+            <div className="bg-bg-secondary/70 p-3 rounded-2xl border border-border/50 shadow-inner">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-black text-primary uppercase tracking-wider flex items-center gap-1">
+                  <FiMapPin className="w-3.5 h-3.5 text-primary" /> Delivery Address Details
+                </span>
+                <span className="text-[9.5px] text-text-tertiary font-bold bg-white px-2 py-0.5 rounded-md border border-border/40">
+                  Lat: {coords.lat.toFixed(5)}, Lng: {coords.lng.toFixed(5)}
+                </span>
+              </div>
+              <textarea
+                value={address}
+                onChange={(e) => {
+                  setAddress(e.target.value);
+                  setSearchQuery(e.target.value);
+                }}
+                className="w-full text-xs text-text font-extrabold bg-white p-2.5 rounded-xl border border-border/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none h-14 leading-relaxed shadow-sm"
+                placeholder="Type flat number, house name, or street details..."
+              />
+            </div>
           </div>
         </div>
 
-        {/* Selected Address Display & Confirmation Footer */}
-        <div className="p-4 border-t border-border/40 bg-white space-y-3">
-          <div className="bg-bg-secondary/70 p-3.5 rounded-2xl border border-border/50 shadow-inner">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-black text-primary uppercase tracking-wider flex items-center gap-1">
-                <FiMapPin className="w-3.5 h-3.5 text-primary" /> Delivery Address Details
-              </span>
-              <span className="text-[9.5px] text-text-tertiary font-bold bg-white px-2 py-0.5 rounded-md border border-border/40">
-                Lat: {coords.lat.toFixed(5)}, Lng: {coords.lng.toFixed(5)}
-              </span>
-            </div>
-            <textarea
-              value={address}
-              onChange={(e) => {
-                setAddress(e.target.value);
-                setSearchQuery(e.target.value);
-              }}
-              className="w-full text-xs text-text font-extrabold bg-white p-3 rounded-xl border border-border/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none h-16 leading-relaxed shadow-sm"
-              placeholder="Type flat number, house name, or street details..."
-            />
-          </div>
-
+        {/* Always Visible Sticky Footer Buttons */}
+        <div className="p-4 border-t border-border/40 bg-white shrink-0">
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="flex-1 py-3.5 bg-bg-secondary hover:bg-bg-tertiary text-text-secondary hover:text-text text-xs sm:text-sm font-bold rounded-2xl transition-colors cursor-pointer text-center"
+              className="flex-1 py-3 bg-bg-secondary hover:bg-bg-tertiary text-text-secondary hover:text-text text-xs sm:text-sm font-bold rounded-2xl transition-colors cursor-pointer text-center"
             >
               Cancel
             </button>
             <button
               onClick={handleConfirm}
               disabled={!address || !address.trim()}
-              className="flex-1 py-3.5 gradient-primary text-white text-xs sm:text-sm font-black rounded-2xl hover:shadow-lg hover:shadow-primary/30 transition-all cursor-pointer disabled:opacity-50 text-center uppercase tracking-wider"
+              className="flex-1 py-3 gradient-primary text-white text-xs sm:text-sm font-black rounded-2xl hover:shadow-lg hover:shadow-primary/30 transition-all cursor-pointer disabled:opacity-50 text-center uppercase tracking-wider"
             >
               Confirm Location
             </button>
