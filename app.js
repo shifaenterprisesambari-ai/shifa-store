@@ -40,6 +40,7 @@ const start = async () => {
       !origin ||
       allowedOrigins.includes(origin) ||
       origin.endsWith(".vercel.app") ||
+      origin.endsWith(".onrender.com") ||
       process.env.NODE_ENV !== "production"
     ) {
       cb(null, true);
