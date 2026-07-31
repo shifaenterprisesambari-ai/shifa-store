@@ -202,11 +202,11 @@ export const createOrder = async(req,reply)=>{
         const riderPayPerKmDoc = await Config.findOne({ key: "rider_pay_per_km" });
         const riderPayPerKm = riderPayPerKmDoc ? Number(riderPayPerKmDoc.value) : 3.5; // default 3.5 per km
 
-        const deliveryLat = req.body.deliveryLocation?.latitude || customerData.liveLocation?.latitude || branchData?.location?.latitude || 26.100511;
-        const deliveryLng = req.body.deliveryLocation?.longitude || customerData.liveLocation?.longitude || branchData?.location?.longitude || 90.41108;
+        const deliveryLat = req.body.deliveryLocation?.latitude || customerData.liveLocation?.latitude || branchData?.location?.latitude || 26.103113;
+        const deliveryLng = req.body.deliveryLocation?.longitude || customerData.liveLocation?.longitude || branchData?.location?.longitude || 90.420934;
         
-        const pickupLat = branchData?.location?.latitude || 26.100511;
-        const pickupLng = branchData?.location?.longitude || 90.41108;
+        const pickupLat = branchData?.location?.latitude || 26.103113;
+        const pickupLng = branchData?.location?.longitude || 90.420934;
 
         const distance = calculateDistance(pickupLat, pickupLng, deliveryLat, deliveryLng) || 1;
 
@@ -348,13 +348,13 @@ export const createOrder = async(req,reply)=>{
                 paymentStatus: isOnline ? "unpaid" : "COD",
                 razorpayOrderId: isOnline ? razorpayOrder.id : undefined,
                 deliveryLocation: {
-                    latitude: req.body.deliveryLocation?.latitude || customerData.liveLocation?.latitude || branchData?.location?.latitude || 26.100511,
-                    longitude: req.body.deliveryLocation?.longitude || customerData.liveLocation?.longitude || branchData?.location?.longitude || 90.41108,
+                    latitude: req.body.deliveryLocation?.latitude || customerData.liveLocation?.latitude || branchData?.location?.latitude || 26.103113,
+                    longitude: req.body.deliveryLocation?.longitude || customerData.liveLocation?.longitude || branchData?.location?.longitude || 90.420934,
                     address: req.body.deliveryLocation?.address || customerData.address || "No address available",
                 },
                 pickupLocation: {
-                    latitude: branchData?.location?.latitude || 26.100511,
-                    longitude: branchData?.location?.longitude || 90.41108,
+                    latitude: branchData?.location?.latitude || 26.103113,
+                    longitude: branchData?.location?.longitude || 90.420934,
                     address: branchData?.address || "No address available",
                 },
             });
