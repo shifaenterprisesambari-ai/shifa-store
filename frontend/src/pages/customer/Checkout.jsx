@@ -87,10 +87,18 @@ const Checkout = () => {
     return R * c; // Distance in km
   };
 
+  const isAmbariBranch = !activeBranch?.name || /ambari|shifa store/i.test(activeBranch?.name);
+
   const custLat = selectedLocation?.latitude || user?.liveLocation?.latitude;
   const custLng = selectedLocation?.longitude || user?.liveLocation?.longitude;
-  const storeLat = activeBranch?.location?.latitude || items[0]?.shop?.branch?.location?.latitude || items[0]?.pickupLocation?.latitude || 26.102074;
-  const storeLng = activeBranch?.location?.longitude || items[0]?.shop?.branch?.location?.longitude || items[0]?.pickupLocation?.longitude || 90.423017;
+
+  const storeLat = isAmbariBranch
+    ? 26.102074
+    : (activeBranch?.location?.latitude || items[0]?.shop?.branch?.location?.latitude || items[0]?.pickupLocation?.latitude || 26.102074);
+
+  const storeLng = isAmbariBranch
+    ? 90.423017
+    : (activeBranch?.location?.longitude || items[0]?.shop?.branch?.location?.longitude || items[0]?.pickupLocation?.longitude || 90.423017);
 
   const hasCoords = Boolean(custLat && custLng && storeLat && storeLng);
   const distance = calculateDistance(storeLat, storeLng, custLat, custLng) || 1;

@@ -14,6 +14,8 @@ import { subscribeUserToPush } from './services/pushNotification';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
 import { fetchWishlist, syncWishlistAsync } from './store/wishlistSlice';
+import { productService } from './services/productService';
+import { setBranch, setBranches } from './store/branchSlice';
 
 const GOOGLE_CLIENT_ID = "1096015868047-imd9e2m46trkc0q1n1ueuqm33mbb7tga.apps.googleusercontent.com";
 
@@ -24,6 +26,25 @@ const queryClient = new QueryClient({
 const AppInit = ({ children }) => {
   const dispatch = useDispatch();
   const { isAuthenticated, user } = useSelector((s) => s.auth);
+  const { activeBranch } = useSelector((s) => s.branch);
+
+  useEffect(() => {
+    const syncBranchData = async () => {
+      try {
+        const { data } = await productService.getBranches();
+        if (data && data.length > 0) {
+          dispatch(setBranches(data));
+          if (activeBranch) {
+            const fresh = data.find((b) => String(b._id) === String(activeBranch._id) || b.name === activeBranch.name);
+            if (fresh) dispatch(setBranch(fresh));
+          }
+        }
+      } catch (e) {
+        console.error('Failed to sync branch data:', e);
+      }
+    };
+    syncBranchData();
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
