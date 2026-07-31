@@ -56,8 +56,9 @@ const Signup = () => {
     }
     setOtpLoading(true);
     try {
-      const res = await authService.sendSignupOtp({ phone: phoneValue, role });
-      toast.success(res.data?.message || 'Verification OTP sent to your mobile number!');
+      const emailValue = watch('email');
+      const res = await authService.sendSignupOtp({ phone: phoneValue, email: emailValue, role });
+      toast.success(res.data?.message || 'Verification OTP sent!');
       setOtpSent(true);
       setResendTimer(30);
     } catch (e) {

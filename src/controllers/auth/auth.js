@@ -100,7 +100,7 @@ const signupOtpStore = new Map();
  */
 export const sendSignupOtp = async (req, reply) => {
   try {
-    const { phone } = req.body;
+    const { phone, email } = req.body;
     if (!phone) {
       return reply.status(400).send({ message: "Mobile number is required" });
     }
@@ -133,14 +133,52 @@ export const sendSignupOtp = async (req, reply) => {
     console.log(`[Signup OTP] Mobile: ${cleanPhone} | Verification Code: ${otp}`);
     console.log(`==========================================\n`);
 
-    // Send normal SMS via Fast2SMS
-    await sendOtpSMS(cleanPhone, otp).catch((e) =>
-      console.error("[Signup OTP] Fast2SMS send error:", e.message)
-    );
+    let smsSent = false;
+    let emailSent = false;
 
-    return reply.send({
-      message: "Verification OTP code sent to your mobile number via SMS.",
+    // Send normal SMS via Fast2SMS
+    const smsRes = await sendOtpSMS(cleanPhone, otp).catch((e) => {
+      console.error("[Signup OTP] Fast2SMS send error:", e.message);
+      return { success: false };
     });
+    if (smsRes && smsRes.success) smsSent = true;
+
+    // Also send via Email if email is provided
+    if (email && /^\S+@\S+\.\S+$/.test(email)) {
+      try {
+        await sendEmail(
+          email,
+          "Your Shifa Store Signup Verification OTP",
+          `
+          <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 500px; border: 1px solid #eee; border-radius: 8px;">
+            <h2 style="color: #FF7A00; margin-bottom: 10px;">Shifa Store - Signup Verification</h2>
+            <p>Hello,</p>
+            <p>Your OTP verification code for creating your account is:</p>
+            <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #111; background: #F3F4F6; padding: 15px; text-align: center; border-radius: 8px; margin: 15px 0;">
+              ${otp}
+            </div>
+            <p style="font-size: 13px; color: #666;">This code is valid for 10 minutes. Please do not share this code with anyone.</p>
+          </div>
+          `
+        );
+        emailSent = true;
+      } catch (e) {
+        console.error("[Signup OTP] Email send error:", e.message);
+      }
+    }
+
+    let msg = "Verification OTP code generated.";
+    if (smsSent && emailSent) {
+      msg = "Verification OTP sent to your phone via SMS and email.";
+    } else if (smsSent) {
+      msg = "Verification OTP sent to your mobile number via SMS.";
+    } else if (emailSent) {
+      msg = "Verification OTP sent to your email address.";
+    } else {
+      msg = "Verification OTP code code generated. If you don't receive SMS, check server environment setup.";
+    }
+
+    return reply.send({ message: msg, smsSent, emailSent });
   } catch (error) {
     console.error("sendSignupOtp error:", error);
     return reply.status(500).send({ message: "An error occurred while sending verification OTP", error });
@@ -694,8 +732,27 @@ export const forgotPassword = async (req, reply) => {
       console.error("[Forgot Password] Fast2SMS send error:", e.message)
     );
 
+    // Also send via Email if available
+    if (user.email) {
+      sendEmail(
+        user.email,
+        "Your Shifa Store Password Reset Verification OTP Code",
+        `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 500px; border: 1px solid #eee; border-radius: 8px;">
+          <h2 style="color: #FF7A00; margin-bottom: 10px;">Shifa Store - Password Reset</h2>
+          <p>Hello ${user.name || "User"},</p>
+          <p>Your OTP verification code to reset your password is:</p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #111; background: #F3F4F6; padding: 15px; text-align: center; border-radius: 8px; margin: 15px 0;">
+            ${otp}
+          </div>
+          <p style="font-size: 13px; color: #666;">This code is valid for 10 minutes. Do not share this code with anyone.</p>
+        </div>
+        `
+      ).catch((e) => console.error("[Forgot Password] Email send error:", e.message));
+    }
+
     return reply.send({
-      message: "A password reset verification OTP code has been sent to your mobile number via Fast2SMS SMS.",
+      message: "A password reset verification OTP code has been sent to your mobile number and email.",
     });
   } catch (error) {
     console.error("Forgot password error:", error);

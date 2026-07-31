@@ -8,6 +8,7 @@ import socketService from '../../services/socketService';
 import { useSelector } from 'react-redux';
 import { Spinner, EmptyState } from '../../components/ui/Loaders';
 import toast from 'react-hot-toast';
+import DeliveryMap from '../../components/delivery/DeliveryMap';
 
 const DeliveryDashboard = () => {
   const [orders, setOrders] = useState([]);
@@ -302,6 +303,21 @@ const DeliveryDashboard = () => {
 
           {/* Stepper active action & maps direction details */}
           <div className="space-y-4 bg-slate-800/50 p-4 rounded-2xl border border-white/5">
+            {/* Interactive Leaflet Map Component with Turn-by-Turn GPS Navigation */}
+            <div className="mb-3 text-text shadow-md rounded-2xl overflow-hidden">
+              <DeliveryMap
+                riderLocation={riderCoords}
+                destinationLocation={
+                  activeOrder.status === 'acceptedByRider'
+                    ? (activeOrder.pickupLocation || activeOrder.branch?.location)
+                    : (activeOrder.deliveryLocation || activeOrder.customer?.liveLocation)
+                }
+                destinationType={activeOrder.status === 'acceptedByRider' ? 'shop' : 'customer'}
+                destinationName={activeOrder.status === 'acceptedByRider' ? activeOrder.branch?.name : (activeOrder.customer?.name || 'Customer')}
+                destinationAddress={activeOrder.status === 'acceptedByRider' ? activeOrder.branch?.address : activeOrder.deliveryLocation?.address}
+              />
+            </div>
+
             <div className="flex items-start gap-2.5 text-xs text-slate-300">
               <FiMapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <div>
