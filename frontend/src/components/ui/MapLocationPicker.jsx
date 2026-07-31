@@ -6,7 +6,7 @@ import { FiSearch, FiX, FiMapPin, FiNavigation } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
-const defaultCenter = { lat: 26.103113, lng: 90.420934 };
+const defaultCenter = { lat: 26.102074, lng: 90.423017 };
 
 // Custom red marker icon for Leaflet pin location picker
 const customMarkerIcon = L.icon({

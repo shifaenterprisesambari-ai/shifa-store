@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { FiNavigation, FiClock, FiMapPin, FiTruck } from 'react-icons/fi';
 
-const defaultCenter = { lat: 26.103113, lng: 90.420934 };
+const defaultCenter = { lat: 26.102074, lng: 90.423017 };
 
 // Rider Marker Icon (Blue/Cyan)
 const riderMarkerIcon = L.icon({
