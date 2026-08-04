@@ -58,26 +58,48 @@ const Home = () => {
       const { data: cats } = await productService.getCategories();
       setCategories(cats || []);
 
-      // Load real branches (stores)
+      let fetchedStores = [];
       try {
         const { data: realStores } = await productService.getStores();
-        setStores(realStores || []);
+        fetchedStores = realStores || [];
+        setStores(fetchedStores);
       } catch (e) {
         console.error('Failed to load stores:', e);
       }
 
       // Load products for each category
       const productsMap = {};
+      let totalProductsCount = 0;
       if (cats && cats.length > 0) {
         await Promise.all(
           cats.map(async (cat) => {
             try {
               const { data } = await productService.getProductsByCategory(cat._id, activeBranch?._id);
               productsMap[cat._id] = data || [];
+              totalProductsCount += (data || []).length;
             } catch { productsMap[cat._id] = []; }
           })
         );
       }
+
+      // If category products are sparse, fetch store products directly from main store so ALL items in DB are displayed!
+      if (totalProductsCount < 10 && fetchedStores.length > 0) {
+        try {
+          const { data: storeProds } = await productService.getStoreProducts(fetchedStores[0]._id);
+          if (storeProds && storeProds.length > 0) {
+            storeProds.forEach((prod) => {
+              const catId = prod.category?._id || prod.category || 'general';
+              if (!productsMap[catId]) productsMap[catId] = [];
+              if (!productsMap[catId].some(p => p._id === prod._id)) {
+                productsMap[catId].push(prod);
+              }
+            });
+          }
+        } catch (e) {
+          console.error('Failed to load fallback store products:', e);
+        }
+      }
+
       setProductsByCategory(productsMap);
     } catch (e) {
       console.error('Failed to load data:', e);
@@ -273,7 +295,7 @@ const Home = () => {
               >
                 <Link to={`/category/${cat._id}`} className="flex flex-col items-center gap-2 min-w-[76px]">
                   <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-2xl bg-gradient-to-b from-orange-50 to-orange-100 border border-orange-100 flex items-center justify-center overflow-hidden p-2 hover:shadow-md transition-shadow">
-                    <img src={cat.image} alt={cat.name} className="w-full h-full object-contain" loading="lazy" />
+                    <img src={cat.image || '/logo.png'} alt={cat.name} className="w-full h-full object-contain" loading="lazy" onError={(e) => { e.target.src = '/logo.png'; }} />
                   </div>
                   <span className="text-[11px] font-medium text-text-secondary text-center leading-tight max-w-[72px] line-clamp-2">{cat.name}</span>
                 </Link>

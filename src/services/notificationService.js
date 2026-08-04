@@ -84,10 +84,8 @@ export const createNotification = async ({
       console.error("Web push error:", e.message)
     );
 
-    // 4. Fast2SMS (background, non-blocking)
-    sendSMSNotification(recipient, recipientModel, title, message).catch((e) =>
-      console.error("SMS notification error:", e.message)
-    );
+    // 4. Fast2SMS order SMS disabled to save costs. (SMS reserved strictly for OTPs: signup & forgot password)
+    // Order updates continue to be delivered via DB in-app alerts, Socket.io real-time popups, and Web Push.
 
     return notification;
   } catch (error) {

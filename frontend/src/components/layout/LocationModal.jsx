@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 const LocationModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const { activeBranch, branches: rawBranches } = useSelector((s) => s.branch);
-  const branches = rawBranches.filter((b) => b.name !== 'SHIFA STORE');
+  const branches = rawBranches;
   const cartCount = useSelector(selectCartCount);
 
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ const LocationModal = ({ isOpen, onClose }) => {
   const [autoAttempted, setAutoAttempted] = useState(false);
 
   useEffect(() => {
-    if (isOpen && branches.length === 0 && !loading) {
+    if (isOpen) {
       loadBranches();
     }
   }, [isOpen]);
@@ -122,10 +122,13 @@ const LocationModal = ({ isOpen, onClose }) => {
           toast.error('No active delivery zones found.');
         }
       },
-      (error) => {
+      async (error) => {
         setGeoLoading(false);
         console.error('Geo error:', error);
         toast.error('Failed to detect location. Please select your zone manually below.');
+        if (branches.length === 0) {
+          await loadBranches();
+        }
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );

@@ -36,7 +36,7 @@ export const getProductsByCategoryId = async (req, reply) => {
       ];
     }
 
-    const products = await Product.find(filter)
+    let products = await Product.find(filter)
       .populate("category", "name image")
       .populate({
         path: "shop",
@@ -47,6 +47,18 @@ export const getProductsByCategoryId = async (req, reply) => {
         }
       })
       .exec();
+
+    // Fallback: If no products found for specific branch, return products in category across all branches
+    if (products.length === 0) {
+      products = await Product.find({ category: categoryId, isEnabled: true, isAvailable: true })
+        .populate("category", "name image")
+        .populate({
+          path: "shop",
+          select: "shopName isClosed branch",
+          populate: { path: "branch", select: "location" }
+        })
+        .exec();
+    }
 
     return reply.send(products);
   } catch (error) {
@@ -69,10 +81,18 @@ export const getAllStores = async (req, reply) => {
       filter.branch = isAmbari ? { $in: AMBARI_BRANCH_IDS } : branchId;
     }
 
-    const shopOwners = await ShopOwner.find(filter)
+    let shopOwners = await ShopOwner.find(filter)
       .populate("branch", "name image address location")
       .lean()
       .exec();
+
+    // Fallback: If no stores found for specific branch, return all active shop owners
+    if (shopOwners.length === 0) {
+      shopOwners = await ShopOwner.find({})
+        .populate("branch", "name image address location")
+        .lean()
+        .exec();
+    }
 
     // Shape each shop owner into a store object for the frontend.
     const stores = shopOwners.map((so) => ({
@@ -124,7 +144,7 @@ export const getProductsByStoreId = async (req, reply) => {
         const shopIds = shopOwners.map((s) => s._id);
         shopOwners.forEach((s) => { if (s.shop) shopIds.push(s.shop); });
 
-        const products = await Product.find({
+        let products = await Product.find({
           $or: [
             { branch: targetBranchFilter },
             { shop: { $in: shopIds } }
@@ -140,10 +160,30 @@ export const getProductsByStoreId = async (req, reply) => {
           })
           .exec();
 
+        if (products.length === 0) {
+          products = await Product.find({ isEnabled: true, isAvailable: true })
+            .populate("category", "name image")
+            .populate({
+              path: "shop",
+              select: "shopName isClosed branch",
+              populate: { path: "branch", select: "location" }
+            })
+            .exec();
+        }
+
         return reply.send(products);
       }
 
-      return reply.status(404).send({ message: "Store or Branch not found" });
+      const allFallbackProducts = await Product.find({ isEnabled: true, isAvailable: true })
+        .populate("category", "name image")
+        .populate({
+          path: "shop",
+          select: "shopName isClosed branch",
+          populate: { path: "branch", select: "location" }
+        })
+        .exec();
+
+      return reply.send(allFallbackProducts);
     }
 
     // Found ShopOwner: fetch products for shopOwner._id or shopOwner.shop or branch
@@ -152,7 +192,7 @@ export const getProductsByStoreId = async (req, reply) => {
 
     const isAmbariShop = shopOwner.branch && AMBARI_BRANCH_IDS.includes(String(shopOwner.branch));
 
-    const products = await Product.find({
+    let products = await Product.find({
       $or: [
         { shop: { $in: shopIds } },
         { branch: isAmbariShop ? { $in: AMBARI_BRANCH_IDS } : shopOwner.branch }
@@ -167,6 +207,17 @@ export const getProductsByStoreId = async (req, reply) => {
         populate: { path: "branch", select: "location" }
       })
       .exec();
+
+    if (products.length === 0) {
+      products = await Product.find({ isEnabled: true, isAvailable: true })
+        .populate("category", "name image")
+        .populate({
+          path: "shop",
+          select: "shopName isClosed branch",
+          populate: { path: "branch", select: "location" }
+        })
+        .exec();
+    }
 
     return reply.send(products);
   } catch (error) {
